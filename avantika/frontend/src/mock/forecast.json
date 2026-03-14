@@ -1,0 +1,100 @@
+[
+  {
+    "fecha": "2026-03-15",
+    "demandaReal": 245,
+    "prediccion": 248,
+    "limiteInferior": 230,
+    "limiteSuperior": 265
+  },
+  {
+    "fecha": "2026-03-16",
+    "demandaReal": 258,
+    "prediccion": 255,
+    "limiteInferior": 238,
+    "limiteSuperior": 272
+  },
+  {
+    "fecha": "2026-03-17",
+    "demandaReal": 242,
+    "prediccion": 250,
+    "limiteInferior": 233,
+    "limiteSuperior": 267
+  },
+  {
+    "fecha": "2026-03-18",
+    "demandaReal": 267,
+    "prediccion": 262,
+    "limiteInferior": 245,
+    "limiteSuperior": 279
+  },
+  {
+    "fecha": "2026-03-19",
+    "demandaReal": 271,
+    "prediccion": 268,
+    "limiteInferior": 251,
+    "limiteSuperior": 285
+  },
+  {
+    "fecha": "2026-03-20",
+    "demandaReal": null,
+    "prediccion": 275,
+    "limiteInferior": 258,
+    "limiteSuperior": 292
+  },
+  {
+    "fecha": "2026-03-21",
+    "demandaReal": null,
+    "prediccion": 280,
+    "limiteInferior": 263,
+    "limiteSuperior": 297
+  },
+  {
+    "fecha": "2026-03-22",
+    "demandaReal": null,
+    "prediccion": 285,
+    "limiteInferior": 268,
+    "limiteSuperior": 302
+  },
+  {
+    "fecha": "2026-03-23",
+    "demandaReal": null,
+    "prediccion": 288,
+    "limiteInferior": 271,
+    "limiteSuperior": 305
+  },
+  {
+    "fecha": "2026-03-24",
+    "demandaReal": null,
+    "prediccion": 292,
+    "limiteInferior": 275,
+    "limiteSuperior": 309
+  },
+  {
+    "fecha": "2026-03-25",
+    "demandaReal": null,
+    "prediccion": 295,
+    "limiteInferior": 278,
+    "limiteSuperior": 312
+  },
+  {
+    "fecha": "2026-03-26",
+    "demandaReal": null,
+    "prediccion": 298,
+    "limiteInferior": 281,
+    "limiteSuperior": 315
+  },
+  {
+    "fecha": "2026-03-27",
+    "demandaReal": null,
+    "prediccion": 300,
+    "limiteInferior": 283,
+    "limiteSuperior": 317
+  },
+  {
+    "fecha": "2026-03-28",
+    "demandaReal": null,
+    "prediccion": 303,
+    "limiteInferior": 286,
+    "limiteSuperior": 320
+  }
+]

@@ -1,0 +1,122 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ============================= */
+/* VARIABLES AVANTIKA */
+/* ============================= */
+
+:root {
+
+  --font-size: 16px;
+
+  --avantika-bg: #f8fafc;
+  --avantika-text: #0f172a;
+
+  --avantika-card: #ffffff;
+  --avantika-card-text: #0f172a;
+
+  --avantika-primary: #2563eb;
+  --avantika-primary-text: #ffffff;
+
+  --avantika-secondary: #e2e8f0;
+
+  --avantika-success: #16a34a;
+  --avantika-warning: #f59e0b;
+  --avantika-danger: #dc2626;
+
+  --avantika-border: #e5e7eb;
+
+  --avantika-sidebar-bg: #0f172a;
+  --avantika-sidebar-text: #e2e8f0;
+
+  --avantika-sidebar-active: #2563eb;
+
+  --radius: 10px;
+}
+
+/* ============================= */
+/* DARK MODE */
+/* ============================= */
+
+.dark {
+
+  --avantika-bg: #020617;
+  --avantika-text: #e2e8f0;
+
+  --avantika-card: #0f172a;
+  --avantika-card-text: #e2e8f0;
+
+  --avantika-secondary: #1e293b;
+
+  --avantika-border: #1e293b;
+
+  --avantika-sidebar-bg: #020617;
+}
+
+/* ============================= */
+/* BASE */
+/* ============================= */
+
+@layer base {
+
+  * {
+    border-color: var(--avantika-border);
+  }
+
+  body {
+    background: var(--avantika-bg);
+    color: var(--avantika-text);
+    font-size: var(--font-size);
+  }
+
+  h1 {
+    font-size: 24px;
+    font-weight: 600;
+  }
+
+  h2 {
+    font-size: 20px;
+    font-weight: 600;
+  }
+
+}
+
+/* ============================= */
+/* COMPONENTS */
+/* ============================= */
+
+@layer components {
+
+  .card {
+    background: var(--avantika-card);
+    color: var(--avantika-card-text);
+    border-radius: var(--radius);
+    padding: 1.25rem;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+  }
+
+  .sidebar {
+    background: var(--avantika-sidebar-bg);
+    color: var(--avantika-sidebar-text);
+  }
+
+  .sidebar-item {
+    padding: 0.6rem 1rem;
+    border-radius: 6px;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .sidebar-item:hover {
+    background: rgba(255,255,255,0.08);
+  }
+
+  .sidebar-item.active {
+    background: var(--avantika-sidebar-active);
+    color: white;
+  }
+
+}

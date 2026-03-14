@@ -1,0 +1,90 @@
+[
+  {
+    "id": "SKU-001",
+    "nombre": "Aceite Motor 5W-30",
+    "categoria": "Lubricantes",
+    "stock": 245,
+    "precio": 45000,
+    "demandaPromedio": 85,
+    "nivelReorden": 100,
+    "proveedor": "Shell Colombia",
+    "ultimaActualizacion": "2026-03-10"
+  },
+  {
+    "id": "SKU-002",
+    "nombre": "Filtro de Aire K&N",
+    "categoria": "Filtros",
+    "stock": 120,
+    "precio": 78000,
+    "demandaPromedio": 45,
+    "nivelReorden": 50,
+    "proveedor": "K&N Distribution",
+    "ultimaActualizacion": "2026-03-12"
+  },
+  {
+    "id": "SKU-003",
+    "nombre": "Batería 75Ah AGM",
+    "categoria": "Baterías",
+    "stock": 35,
+    "precio": 520000,
+    "demandaPromedio": 12,
+    "nivelReorden": 20,
+    "proveedor": "Bosch Auto",
+    "ultimaActualizacion": "2026-03-11"
+  },
+  {
+    "id": "SKU-004",
+    "nombre": "Pastillas de Freno Cerámicas",
+    "categoria": "Frenos",
+    "stock": 180,
+    "precio": 125000,
+    "demandaPromedio": 65,
+    "nivelReorden": 80,
+    "proveedor": "Brembo Parts",
+    "ultimaActualizacion": "2026-03-13"
+  },
+  {
+    "id": "SKU-005",
+    "nombre": "Neumático 205/55R16",
+    "categoria": "Neumáticos",
+    "stock": 90,
+    "precio": 285000,
+    "demandaPromedio": 38,
+    "nivelReorden": 60,
+    "proveedor": "Michelin Colombia",
+    "ultimaActualizacion": "2026-03-09"
+  },
+  {
+    "id": "SKU-006",
+    "nombre": "Refrigerante Anticongelante 4L",
+    "categoria": "Fluidos",
+    "stock": 310,
+    "precio": 35000,
+    "demandaPromedio": 95,
+    "nivelReorden": 150,
+    "proveedor": "Mobil Fluids",
+    "ultimaActualizacion": "2026-03-14"
+  },
+  {
+    "id": "SKU-007",
+    "nombre": "Amortiguador Delantero",
+    "categoria": "Suspensión",
+    "stock": 45,
+    "precio": 195000,
+    "demandaPromedio": 18,
+    "nivelReorden": 30,
+    "proveedor": "Monroe Suspension",
+    "ultimaActualizacion": "2026-03-08"
+  },
+  {
+    "id": "SKU-008",
+    "nombre": "Bujías Iridium Set x4",
+    "categoria": "Encendido",
+    "stock": 156,
+    "precio": 92000,
+    "demandaPromedio": 52,
+    "nivelReorden": 70,
+    "proveedor": "NGK Spark Plugs",
+    "ultimaActualizacion": "2026-03-13"
+  }
+]
