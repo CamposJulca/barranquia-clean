@@ -1,18 +1,26 @@
 import { Link, useLocation } from "react-router";
-import { BarChart3, Package, TrendingUp, Home, AlertTriangle, BookOpen } from "lucide-react";
+import { BarChart3, Package, TrendingUp, ArrowLeft} from "lucide-react";
 
-const navigation = [
+type NavItem = {
+  name: string;
+  icon: any;
+  path?: string;
+  children?: {
+    name: string;
+    path: string;
+    icon: any;
+  }[];
+};
+const navigation: NavItem[] = [
   {
     name: "Avantika",
     icon: BarChart3,
     children: [
       { name: "Vista General", path: "/avantika", icon: BarChart3 },
       { name: "SKUs", path: "/avantika/skus", icon: Package },
-      { name: "Predicción", path: "/avantika/forecast", icon: TrendingUp },
+      { name: "Predicciónes", path: "/avantika/forecast", icon: TrendingUp },
     ],
-  },
-  { name: "Joz", path: "/joz/alertas", icon: AlertTriangle },
-  { name: "Serviparamo", path: "/serviparamo/catalogo", icon: BookOpen },
+  }
 ];
 
 export default function Sidebar() {
@@ -26,7 +34,7 @@ export default function Sidebar() {
     <aside className="w-64 bg-slate-900 text-white flex flex-col">
       <div className="p-6 border-b border-slate-800">
         <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent">
-          BarranquIA Hub
+          Avantika
         </h1>
         <p className="text-sm text-slate-400 mt-1">Analytics Platform</p>
       </div>
@@ -73,7 +81,15 @@ export default function Sidebar() {
           </div>
         ))}
       </nav>
-
+<div className="p-4 border-t border-slate-800">
+  <a
+    href="http://localhost:5175"
+    className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-slate-400 hover:bg-slate-800 hover:text-white transition-colors"
+  >
+    <ArrowLeft className="w-5 h-5" />
+    <span>Volver</span>
+  </a>
+</div>
       <div className="p-4 border-t border-slate-800">
         <div className="flex items-center gap-3 px-3 py-2">
           <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-400 to-cyan-400 flex items-center justify-center text-white font-semibold">

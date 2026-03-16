@@ -11,7 +11,7 @@ const SERVICES = [
     description: 'Plataforma de gestión', 
     icon: '🤖', 
     color: '#6c63ff', 
-    externalUrl: 'http://localhost:5175' 
+    externalUrl: 'http://localhost:5173' 
   },
   { 
     id: 'joz', 
@@ -19,7 +19,7 @@ const SERVICES = [
     description: 'Sistema de análisis', 
     icon: '📊', 
     color: '#00d4ff', 
-    externalUrl: 'http://localhost:5175' // Asumiendo otro puerto para Joz
+    externalUrl: 'http://localhost:5174' 
   },
   { 
     id: 'powerbi', 
@@ -35,7 +35,7 @@ const SERVICES = [
     description: 'Servicio de páramos', 
     icon: '🌿', 
     color: '#51cf66', 
-    externalUrl: '#' 
+    externalUrl: 'http://localhost:5176' 
   },
 ]
 
