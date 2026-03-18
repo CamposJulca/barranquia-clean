@@ -1,57 +1,59 @@
 import { useState, useEffect } from 'react'
+import { Routes, Route, useNavigate } from 'react-router-dom'
 import axios from 'axios'
 import Login from './Login'
+import ServiParamo from './ServiParamo'
 import './App.css'
 
-// Definimos las rutas. Para proyectos externos usamos la URL completa (localhost:5174)
 const SERVICES = [
-  { 
-    id: 'avantika', 
-    name: 'Avantika', 
-    description: 'Plataforma de gestión', 
-    icon: '🤖', 
-    color: '#6c63ff', 
-    externalUrl: 'http://localhost:5173' 
+  {
+    id: 'avantika',
+    name: 'Avantika',
+    description: 'Plataforma de gestión',
+    icon: '🤖',
+    color: '#6c63ff',
+    externalUrl: 'http://localhost:5173',
   },
-  { 
-    id: 'joz', 
-    name: 'Joz', 
-    description: 'Sistema de análisis', 
-    icon: '📊', 
-    color: '#00d4ff', 
-    externalUrl: 'http://localhost:5174' 
+  {
+    id: 'joz',
+    name: 'Joz',
+    description: 'Sistema de análisis',
+    icon: '📊',
+    color: '#00d4ff',
+    externalUrl: 'http://localhost:5174',
   },
-  { 
-    id: 'powerbi', 
-    name: 'Power BI', 
-    description: 'Reportes y dashboards', 
-    icon: '📈', 
-    color: '#ff6b6b', 
-    externalUrl: 'https://app.powerbi.com' 
+  {
+    id: 'powerbi',
+    name: 'Power BI',
+    description: 'Reportes y dashboards',
+    icon: '📈',
+    color: '#ff6b6b',
+    externalUrl: 'https://app.powerbi.com',
   },
-  { 
-    id: 'serviparamo', 
-    name: 'ServiPáramo', 
-    description: 'Servicio de páramos', 
-    icon: '🌿', 
-    color: '#51cf66', 
-    externalUrl: 'http://localhost:5176' 
+  {
+    id: 'serviparamo',
+    name: 'ServiPáramo',
+    description: 'Normalización de catálogo SKUs',
+    icon: '🌿',
+    color: '#51cf66',
+    path: '/serviparamo',
   },
 ]
 
 function ServiceCard({ service }) {
+  const navigate = useNavigate()
+
   const handleNavigation = () => {
-    if (service.externalUrl && service.externalUrl !== '#') {
-      // Redirección forzada a la otra aplicación
-      window.location.href = service.externalUrl;
-    } else {
-      console.log("Servicio no configurado aún");
+    if (service.path) {
+      navigate(service.path)
+    } else if (service.externalUrl) {
+      window.location.href = service.externalUrl
     }
-  };
+  }
 
   return (
-    <div 
-      className="service-card" 
+    <div
+      className="service-card"
       style={{ '--accent': service.color, cursor: 'pointer' }}
       onClick={handleNavigation}
     >
@@ -66,44 +68,14 @@ function ServiceCard({ service }) {
   )
 }
 
-function App() {
-  const [token, setToken] = useState(() => localStorage.getItem('token'))
-  const [username, setUsername] = useState(() => localStorage.getItem('username') || '')
+function Hub({ token, username, onLogout }) {
   const [health, setHealth] = useState(null)
 
   useEffect(() => {
-    if (!token) return
-    // Cambia esta URL por la de tu API real de salud del sistema
     axios.get('/api/health/')
       .then(r => setHealth(r.data))
       .catch(() => setHealth({ status: 'error' }))
-  }, [token])
-
-  function handleLogin(newToken, newUsername) {
-    localStorage.setItem('token', newToken)
-    localStorage.setItem('username', newUsername)
-    setToken(newToken)
-    setUsername(newUsername)
-  }
-
-  async function handleLogout() {
-    try {
-      await axios.post('/api/logout/', {}, {
-        headers: { Authorization: `Token ${token}` }
-      })
-    } catch (_) {
-      console.log("Logout local realizado");
-    }
-    localStorage.removeItem('token')
-    localStorage.removeItem('username')
-    setToken(null)
-    setUsername('')
-    setHealth(null)
-  }
-
-  if (!token) {
-    return <Login onLogin={handleLogin} />
-  }
+  }, [])
 
   return (
     <div className="app">
@@ -122,7 +94,7 @@ function App() {
             </div>
             <div className="user-menu">
               <span className="username">{username}</span>
-              <button className="logout-btn" onClick={handleLogout}>Salir</button>
+              <button className="logout-btn" onClick={onLogout}>Salir</button>
             </div>
           </div>
         </div>
@@ -133,7 +105,6 @@ function App() {
           <h2>Servicios Disponibles</h2>
           <p>Accede a todas las plataformas de inteligencia artificial desde un solo lugar</p>
         </section>
-
         <div className="services-grid">
           {SERVICES.map(service => (
             <ServiceCard key={service.id} service={service} />
@@ -145,6 +116,39 @@ function App() {
         <p>BarranquIA Hub · Barranquilla, Colombia · {new Date().getFullYear()}</p>
       </footer>
     </div>
+  )
+}
+
+function App() {
+  const [token, setToken] = useState(() => localStorage.getItem('token'))
+  const [username, setUsername] = useState(() => localStorage.getItem('username') || '')
+
+  function handleLogin(newToken, newUsername) {
+    localStorage.setItem('token', newToken)
+    localStorage.setItem('username', newUsername)
+    setToken(newToken)
+    setUsername(newUsername)
+  }
+
+  async function handleLogout() {
+    try {
+      await axios.post('/api/logout/', {}, {
+        headers: { Authorization: `Token ${token}` },
+      })
+    } catch (_) {}
+    localStorage.removeItem('token')
+    localStorage.removeItem('username')
+    setToken(null)
+    setUsername('')
+  }
+
+  if (!token) return <Login onLogin={handleLogin} />
+
+  return (
+    <Routes>
+      <Route path="/serviparamo/*" element={<ServiParamo token={token} username={username} />} />
+      <Route path="*" element={<Hub token={token} username={username} onLogout={handleLogout} />} />
+    </Routes>
   )
 }
 
