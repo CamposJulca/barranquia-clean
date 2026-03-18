@@ -44,3 +44,4 @@ Thumbs.db
 
 # Claude settings
 .claude/settings.local.json
+test_db*.py
