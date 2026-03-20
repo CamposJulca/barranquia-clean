@@ -1,11 +1,9 @@
 import { LucideIcon } from "lucide-react";
-import { Card, CardContent } from "./ui/card";
 
 interface StatCardProps {
   title: string;
   value: string | number;
-  change?: string;
-  changeType?: "positive" | "negative" | "neutral";
+  description?: string; // ✅ AQUI ESTA LA CLAVE
   icon: LucideIcon;
   iconColor?: string;
 }
@@ -13,33 +11,32 @@ interface StatCardProps {
 export function StatCard({
   title,
   value,
-  change,
-  changeType = "neutral",
+  description,
   icon: Icon,
-  iconColor = "bg-blue-100 text-blue-600",
+  iconColor = "bg-gray-100 text-gray-600",
 }: StatCardProps) {
-  const changeColors = {
-    positive: "text-green-600",
-    negative: "text-red-600",
-    neutral: "text-gray-600",
-  };
-
   return (
-    <Card className="shadow-sm">
-      <CardContent className="p-6">
-        <div className="flex items-start justify-between">
-          <div className="flex-1">
-            <p className="text-sm text-gray-600 mb-1">{title}</p>
-            <p className="text-3xl font-semibold text-gray-900 mb-2">{value}</p>
-            {change && (
-              <p className={`text-sm ${changeColors[changeType]}`}>{change}</p>
-            )}
-          </div>
-          <div className={`p-3 rounded-lg ${iconColor}`}>
-            <Icon className="w-6 h-6" />
-          </div>
+    <div className="bg-white rounded-2xl shadow-sm p-5 border border-gray-100">
+      <div className="flex items-center justify-between">
+        <div>
+          <p className="text-sm text-gray-500">{title}</p>
+
+          <h2 className="text-2xl font-semibold text-gray-900">
+            {value}
+          </h2>
+
+          {/* ✅ NUEVO */}
+          {description && (
+            <p className="text-xs text-gray-400 mt-1">
+              {description}
+            </p>
+          )}
         </div>
-      </CardContent>
-    </Card>
+
+        <div className={`p-3 rounded-xl ${iconColor}`}>
+          <Icon size={20} />
+        </div>
+      </div>
+    </div>
   );
 }

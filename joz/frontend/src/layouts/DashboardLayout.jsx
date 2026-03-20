@@ -6,7 +6,6 @@ export default function DashboardLayout() {
   return (
     <div className="min-h-screen bg-gray-50">
       <Sidebar />
-      <Header />
       <main className="ml-64 pt-16">
         <div className="p-8">
           <Outlet />

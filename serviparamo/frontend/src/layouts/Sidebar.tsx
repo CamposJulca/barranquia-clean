@@ -17,7 +17,6 @@ const navigation = [
   { name: "Búsqueda Semántica", href: "/search", icon: Search },
   { name: "Detección de Duplicados", href: "/duplicates", icon: Copy },
   { name: "Normalización", href: "/normalization", icon: Workflow },
-  //{ name: "Compras", href: "/purchases", icon: ShoppingCart },
   { name: "Analíticas", href: "/analytics", icon: BarChart3 },
   { name: "Configuración", href: "/settings", icon: Settings },
 ];
@@ -26,19 +25,22 @@ export default function Sidebar() {
   const location = useLocation();
 
   return (
-    <div className="flex flex-col w-64 bg-white border-r border-gray-200 h-screen">
-      <div className="flex items-center h-16 px-6 border-b border-gray-200">
+    <div className="flex flex-col w-64 bg-green-900 text-white border-r border-green-800 h-screen">
+      
+      {/* HEADER */}
+      <div className="flex items-center h-16 px-6 border-b border-green-800">
         <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center">
+          <div className="w-8 h-8 rounded-lg bg-green-500 flex items-center justify-center">
             <span className="text-white font-semibold">S</span>
           </div>
           <div>
-            <h1 className="font-semibold text-gray-900">Serviparamo</h1>
-            <p className="text-xs text-gray-500">AI Catalog Manager</p>
+            <h1 className="font-semibold text-white">Serviparamo</h1>
+            <p className="text-xs text-green-200">AI Catalog Manager</p>
           </div>
         </div>
       </div>
 
+      {/* NAV */}
       <nav className="flex-1 px-3 py-4 space-y-1">
         {navigation.map((item) => {
           const isActive =
@@ -52,8 +54,8 @@ export default function Sidebar() {
               to={item.href}
               className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${
                 isActive
-                  ? "bg-blue-50 text-blue-700"
-                  : "text-gray-700 hover:bg-gray-50"
+                  ? "bg-green-600 text-white shadow-md"
+                  : "text-green-100 hover:bg-green-800 hover:text-white"
               }`}
             >
               <Icon className="w-5 h-5" />
@@ -62,15 +64,17 @@ export default function Sidebar() {
           );
         })}
       </nav>
-      <div className="px-3 py-4 border-t border-gray-200">
-  <a
-    href="http://localhost:5175"
-    className="flex items-center gap-3 px-3 py-2 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
-  >
-    <ArrowLeft className="w-5 h-5" />
-    <span className="text-sm font-medium">Volver</span>
-  </a>
-</div>
+
+      {/* FOOTER */}
+      <div className="px-3 py-4 border-t border-green-800">
+        <a
+          href="http://localhost:5175"
+          className="flex items-center gap-3 px-3 py-2 rounded-lg text-green-100 hover:bg-green-800 hover:text-white transition-colors"
+        >
+          <ArrowLeft className="w-5 h-5" />
+          <span className="text-sm font-medium">Volver</span>
+        </a>
+      </div>
     </div>
   );
 }

@@ -33,9 +33,16 @@ def buscar(request):
         import numpy as np
 
         modelo = SentenceTransformer('all-MiniLM-L6-v2')
+
         vector_query = modelo.encode([q], normalize_embeddings=True)[0]
 
-        embeddings_qs = CatalogoEmbedding.objects.select_related('sku').all()
+        total_embeddings = CatalogoEmbedding.objects.count()
+
+        if total_embeddings > 10000:
+            embeddings_qs = CatalogoEmbedding.objects.select_related('sku').all()[:5000]
+        else:
+            embeddings_qs = CatalogoEmbedding.objects.select_related('sku').all()
+
         resultados = []
 
         for emb in embeddings_qs.iterator(chunk_size=2000):
@@ -46,6 +53,7 @@ def buscar(request):
         resultados.sort(key=lambda x: x[0], reverse=True)
         top = resultados[:limite]
 
+    
         data = []
         for sim, sku in top:
             row = SKUResumenSerializer(sku).data
@@ -55,13 +63,14 @@ def buscar(request):
         return Response(data)
 
     except ImportError:
-        # Fallback: búsqueda por texto si no hay sentence_transformers
         qs = CatalogoSKU.objects.filter(
-            Q(nombre__icontains=q) | Q(nombre1__icontains=q) |
-            Q(familia__icontains=q) | Q(codigo__icontains=q)
+            Q(nombre__icontains=q) |
+            Q(nombre1__icontains=q) |
+            Q(familia__icontains=q) |
+            Q(codigo__icontains=q)
         )[:limite]
-        return Response(SKUResumenSerializer(qs, many=True).data)
 
+        return Response(SKUResumenSerializer(qs, many=True).data)
 
 @api_view(['GET'])
 def duplicados(request):

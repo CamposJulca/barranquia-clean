@@ -1,51 +1,37 @@
-import axios from "axios";
+import axios from 'axios'
+import useSessionStore from '../store/useSessionStore'
 
-// Creamos la instancia sin el header de Auth fijo
 const api = axios.create({
-  baseURL: "http://localhost:9005/avantika", // Usamos el puerto del Nginx Gateway
-  headers: {
-    "Content-Type": "application/json",
-  },
-});
+  baseURL: import.meta.env.VITE_API_URL,
+  timeout: Number(import.meta.env.VITE_API_TIMEOUT) || 10000,
+})
 
-// INTERCEPTOR: Inyecta el token dinámicamente en cada petición
 api.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem("token"); // O useSessionStore.getState().token
+    const token = useSessionStore.getState().token
+
     if (token) {
-      config.headers.Authorization = `Token ${token}`;
+      config.headers.Authorization = `Bearer ${token}`
     }
-    return config;
+
+    return config
   },
+  (error) => Promise.reject(error)
+)
+
+api.interceptors.response.use(
+  (response) => response,
   (error) => {
-    return Promise.reject(error);
+    if (error.response) {
+      console.error('API Error:', error.response.data)
+    } else if (error.request) {
+      console.error('No response from server')
+    } else {
+      console.error('Request error:', error.message)
+    }
+
+    return Promise.reject(error)
   }
-);
+)
 
-// --- Servicios de Avántica ---
-
-// Forecast: Predicción de demanda
-export const predecirDemanda = (skuId, fechaInicio, fechaFin) =>
-  api.post("/predecir-demanda", { 
-    sku_id: skuId, 
-    fecha_inicio: fechaInicio, 
-    fecha_fin: fechaFin 
-  });
-
-// Inventario: Clasificación ABC y estados
-export const getClasificacionABC = (categoria, estado) =>
-  api.get("/clasificacion-abc", { params: { categoria, estado } });
-
-// Logística: Sugerencias de reposición
-export const getSugerenciasReposicion = (skuId, categoria) =>
-  api.get("/sugerencias-reposicion", { params: { sku_id: skuId, categoria } });
-
-// Configuración: Parámetros del modelo
-export const setParametros = (params) =>
-  api.post("/parametros", params);
-
-// Feedback: Mejora continua del modelo
-export const logFeedback = (feedback) =>
-  api.post("/log-feedback", feedback);
-
-export default api;
+export default api
