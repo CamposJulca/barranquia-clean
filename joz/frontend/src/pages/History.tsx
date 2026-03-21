@@ -3,134 +3,65 @@ import { Badge } from '../components/ui/badge';
 import { Input } from '../components/ui/input';
 import { Button } from '../components/ui/button';
 import { Calendar, Download } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { getHistorial } from '../services/api';
+
+type ResultadoType = 'false_positive' | 'confirmed' | 'investigating';
 
 interface HistoryRecord {
-  id: string;
+  id: number;
   date: string;
   store: string;
   anomalyType: string;
   amount: number;
-  result: string;
-  status: 'false_positive' | 'confirmed' | 'investigating';
+  resultado: ResultadoType; // aquí usamos el tipo exacto
+  estado: string;
+  analista: string;
 }
 
-const historyData: HistoryRecord[] = [
-  {
-    id: 'HST-001',
-    date: '16/03/2026 14:32',
-    store: 'Tienda Centro',
-    anomalyType: 'Transacción inusual',
-    amount: 15000,
-    result: 'Fraude confirmado',
-    status: 'confirmed',
-  },
-  {
-    id: 'HST-002',
-    date: '16/03/2026 12:15',
-    store: 'Tienda Norte',
-    anomalyType: 'Devolución atípica',
-    amount: 8500,
-    result: 'Falso positivo',
-    status: 'false_positive',
-  },
-  {
-    id: 'HST-003',
-    date: '15/03/2026 18:45',
-    store: 'Tienda Este',
-    anomalyType: 'Descuento excesivo',
-    amount: 12000,
-    result: 'En investigación',
-    status: 'investigating',
-  },
-  {
-    id: 'HST-004',
-    date: '15/03/2026 16:20',
-    store: 'Tienda Oeste',
-    anomalyType: 'Horario fuera de rango',
-    amount: 9200,
-    result: 'Error del sistema',
-    status: 'false_positive',
-  },
-  {
-    id: 'HST-005',
-    date: '15/03/2026 11:05',
-    store: 'Tienda Sur',
-    anomalyType: 'Múltiples transacciones',
-    amount: 6800,
-    result: 'Comportamiento normal',
-    status: 'false_positive',
-  },
-  {
-    id: 'HST-006',
-    date: '14/03/2026 19:30',
-    store: 'Tienda Plaza',
-    anomalyType: 'Transacción sospechosa',
-    amount: 11500,
-    result: 'Fraude confirmado',
-    status: 'confirmed',
-  },
-  {
-    id: 'HST-007',
-    date: '14/03/2026 15:10',
-    store: 'Tienda Centro',
-    anomalyType: 'Cambio de precio',
-    amount: 7200,
-    result: 'Acción correctiva aplicada',
-    status: 'confirmed',
-  },
-  {
-    id: 'HST-008',
-    date: '14/03/2026 10:45',
-    store: 'Tienda Norte',
-    anomalyType: 'Cancelación masiva',
-    amount: 5400,
-    result: 'Falso positivo',
-    status: 'false_positive',
-  },
-  {
-    id: 'HST-009',
-    date: '13/03/2026 17:25',
-    store: 'Tienda Este',
-    anomalyType: 'Usuario no autorizado',
-    amount: 13600,
-    result: 'Acceso bloqueado',
-    status: 'confirmed',
-  },
-  {
-    id: 'HST-010',
-    date: '13/03/2026 13:50',
-    store: 'Tienda Oeste',
-    anomalyType: 'Patrón inusual',
-    amount: 9800,
-    result: 'En investigación',
-    status: 'investigating',
-  },
-];
-
-const statusColors = {
+const statusColors: Record<ResultadoType, string> = {
   false_positive: 'bg-gray-100 text-gray-800 border-gray-200',
   confirmed: 'bg-red-100 text-red-800 border-red-200',
   investigating: 'bg-blue-100 text-blue-800 border-blue-200',
 };
 
-const statusLabels = {
+const statusLabels: Record<ResultadoType, string> = {
   false_positive: 'Falso Positivo',
   confirmed: 'Confirmado',
   investigating: 'Investigando',
 };
 
 export default function History() {
+  const [historyData, setHistoryData] = useState<HistoryRecord[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
+
+  useEffect(() => {
+    async function fetchData() {
+      try {
+        const response = await getHistorial({ page: 1, page_size: 20 });
+        const data: HistoryRecord[] = response.data.results.map((item: any) => ({
+          ...item,
+          amount: Number(item.amount),
+          resultado: item.resultado as ResultadoType, // casteamos al tipo correcto
+        }));
+        setHistoryData(data);
+      } catch (error) {
+        console.error('Error al cargar historial', error);
+      }
+    }
+
+    fetchData();
+  }, []);
 
   const filteredHistory = historyData.filter(record =>
     record.store.toLowerCase().includes(searchTerm.toLowerCase()) ||
     record.anomalyType.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    record.id.toLowerCase().includes(searchTerm.toLowerCase())
+    record.id.toString().includes(searchTerm)
   );
 
   return (
     <div className="space-y-6">
+      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl">Historial</h1>
@@ -175,22 +106,24 @@ export default function History() {
                 <th className="text-left px-4 py-3 text-sm text-gray-600">Monto</th>
                 <th className="text-left px-4 py-3 text-sm text-gray-600">Resultado</th>
                 <th className="text-left px-4 py-3 text-sm text-gray-600">Estado</th>
+                <th className="text-left px-4 py-3 text-sm text-gray-600">Analista</th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {filteredHistory.map((record) => (
                 <tr key={record.id} className="hover:bg-gray-50">
                   <td className="px-4 py-3 text-sm font-medium">{record.id}</td>
-                  <td className="px-4 py-3 text-sm text-gray-600">{record.date}</td>
+                  <td className="px-4 py-3 text-sm text-gray-600">{new Date(record.date).toLocaleString()}</td>
                   <td className="px-4 py-3 text-sm">{record.store}</td>
                   <td className="px-4 py-3 text-sm">{record.anomalyType}</td>
                   <td className="px-4 py-3 text-sm">${record.amount.toLocaleString()}</td>
-                  <td className="px-4 py-3 text-sm">{record.result}</td>
-                  <td className="px-4 py-3">
-                    <Badge variant="outline" className={statusColors[record.status]}>
-                      {statusLabels[record.status]}
+                  <td className="px-4 py-3 text-sm">
+                    <Badge variant="outline" className={statusColors[record.resultado]}>
+                      {statusLabels[record.resultado]}
                     </Badge>
                   </td>
+                  <td className="px-4 py-3 text-sm">{record.estado}</td>
+                  <td className="px-4 py-3 text-sm">{record.analista}</td>
                 </tr>
               ))}
             </tbody>
