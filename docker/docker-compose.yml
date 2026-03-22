@@ -1,0 +1,101 @@
+version: '3.9'
+
+services:
+
+  # ── HUB ──────────────────────────────────────────────
+  hub-backend:
+    build:
+      context: ../backend/hub
+      dockerfile: ../../docker/hub/Dockerfile.backend
+    container_name: barranquia_hub_backend
+    restart: unless-stopped
+    env_file: ../.env
+    depends_on:
+      - postgres
+    ports:
+      - "8005:8005"
+
+  hub-frontend:
+    build:
+      context: ../frontend/hub
+      dockerfile: ../../docker/hub/Dockerfile.frontend
+    container_name: barranquia_hub_frontend
+    restart: unless-stopped
+
+  # ── AVANTIKA ─────────────────────────────────────────
+  avantika-backend:
+    build:
+      context: ../backend/avantika
+      dockerfile: ../../docker/avantika/Dockerfile.backend
+    container_name: barranquia_avantika_backend
+    restart: unless-stopped
+    env_file: ../.env
+    ports:
+      - "9001:9001"
+
+  avantika-frontend:
+    build:
+      context: ../frontend/avantika
+      dockerfile: ../../docker/avantika/Dockerfile.frontend
+    container_name: barranquia_avantika_frontend
+    restart: unless-stopped
+
+  # ── JOZ ──────────────────────────────────────────────
+  joz-backend:
+    build:
+      context: ../backend/joz
+      dockerfile: ../../docker/joz/Dockerfile.backend
+    container_name: barranquia_joz_backend
+    restart: unless-stopped
+    env_file: ../.env
+    ports:
+      - "9003:9003"
+
+  joz-frontend:
+    build:
+      context: ../frontend/joz
+      dockerfile: ../../docker/joz/Dockerfile.frontend
+    container_name: barranquia_joz_frontend
+    restart: unless-stopped
+
+  # ── SERVIPARAMO ───────────────────────────────────────
+  serviparamo-backend:
+    build:
+      context: ../backend/serviparamo
+      dockerfile: ../../docker/serviparamo/Dockerfile.backend
+    container_name: barranquia_serviparamo_backend
+    restart: unless-stopped
+    env_file: ../.env
+    ports:
+      - "9002:9002"
+
+  serviparamo-frontend:
+    build:
+      context: ../frontend/serviparamo
+      dockerfile: ../../docker/serviparamo/Dockerfile.frontend
+    container_name: barranquia_serviparamo_frontend
+    restart: unless-stopped
+
+  # ── NGINX (API Gateway) ───────────────────────────────
+  nginx:
+    image: nginx:alpine
+    container_name: barranquia_nginx
+    restart: unless-stopped
+    ports:
+      - "9005:9005"
+    volumes:
+      - ../infra/nginx/barranquia-hub.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - hub-backend
+
+  # ── BASE DE DATOS ─────────────────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    container_name: barranquia_postgres
+    restart: unless-stopped
+    env_file: ../.env
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+volumes:
+  postgres_data:

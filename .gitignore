@@ -46,3 +46,8 @@ Thumbs.db
 .claude/settings.local.json
 test_db*.py
 node_modules/
+node_modules/
+.env
+__pycache__/
+*.log
+.DS_Store

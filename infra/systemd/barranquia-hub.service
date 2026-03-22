@@ -1,0 +1,17 @@
+[Unit]
+Description=BarranquIA Hub - Django Backend
+After=network.target
+
+[Service]
+Type=simple
+User=desarrollo
+WorkingDirectory=/home/desarrollo/barranquIA-clean/backend/hub
+Environment="PATH=/home/desarrollo/barranquIA-clean/backend/hub/venv/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin"
+ExecStart=/home/desarrollo/barranquIA-clean/backend/hub/venv/bin/gunicorn barranquia.wsgi:application --bind 127.0.0.1:8005 --workers 3 --timeout 120
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
