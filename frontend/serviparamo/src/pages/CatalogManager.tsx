@@ -148,7 +148,7 @@ export default function CatalogManager() {
                     </TableCell>
                     <TableCell>
                       {sku.aprobado ? (
-                        <Badge className="bg-green-100 text-green-700 border-green-200">
+                        <Badge className="bg-sp-blue-light text-sp-blue border-sp-blue/20">
                           Aprobado
                         </Badge>
                       ) : sku.es_duplicado ? (

@@ -154,11 +154,11 @@ export default function DuplicateDetection() {
       </div>
 
       {/* Info del grupo */}
-      <Card className="bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200 shadow-sm">
+      <Card className="bg-gradient-to-r from-sp-cyan-light to-sp-blue-light border-sp-cyan/30 shadow-sm">
         <CardContent className="p-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-full bg-blue-600 flex items-center justify-center">
+              <div className="w-12 h-12 rounded-full bg-sp-blue flex items-center justify-center">
                 <span className="text-white font-semibold">{grupo.total}</span>
               </div>
               <div>
@@ -170,7 +170,7 @@ export default function DuplicateDetection() {
             </div>
             <div className="flex items-center gap-3">
               {grupo.aprobados > 0 && (
-                <Badge className="bg-green-100 text-green-700 border-green-200">
+                <Badge className="bg-sp-blue-light text-sp-blue border-sp-blue/20">
                   <CheckCircle className="w-3 h-3 mr-1" />
                   {grupo.aprobados} aprobados
                 </Badge>
@@ -186,7 +186,7 @@ export default function DuplicateDetection() {
       {/* Grid de SKUs del grupo */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {grupo.items.map((sku, i) => (
-          <Card key={sku.id} className={`shadow-sm ${sku.aprobado ? "border-green-300" : ""}`}>
+          <Card key={sku.id} className={`shadow-sm ${sku.aprobado ? "border-sp-blue/40" : ""}`}>
             <CardHeader className="bg-gray-50 border-b py-3 px-4">
               <CardTitle className="text-sm flex items-center justify-between">
                 <span className="text-gray-500">SKU {i + 1}</span>
@@ -226,7 +226,7 @@ export default function DuplicateDetection() {
                 <p className="text-sm text-gray-900">{sku.unidad || "—"}</p>
               </div>
               {sku.aprobado && (
-                <Badge className="bg-green-100 text-green-700 border-green-200 mt-1">
+                <Badge className="bg-sp-blue-light text-sp-blue border-sp-blue/20 mt-1">
                   <CheckCircle className="w-3 h-3 mr-1" />
                   Aprobado
                 </Badge>
@@ -253,7 +253,7 @@ export default function DuplicateDetection() {
               size="lg"
               onClick={() => handleAprobarGrupo(grupo.grupo_duplicado)}
               disabled={approving || grupo.aprobados === grupo.total}
-              className="min-w-40 bg-green-600 hover:bg-green-700"
+              className="min-w-40 bg-sp-blue hover:bg-sp-blue-hover text-white"
             >
               {approving ? (
                 <><Loader className="w-4 h-4 mr-2 animate-spin" />Aprobando…</>

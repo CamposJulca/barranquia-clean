@@ -82,7 +82,7 @@ export default function Dashboard() {
             value={stats.aprobados.toLocaleString()}
             description={`${stats.sin_familia.toLocaleString()} sin familia asignada`}
             icon={CheckCircle}
-            iconColor="bg-green-100 text-green-600"
+            iconColor="bg-sp-blue-light text-sp-blue"
           />
         </div>
       </div>

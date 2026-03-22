@@ -77,10 +77,10 @@ export default function Settings() {
       </div>
 
       {/* ── Sincronización ERP (ETL) ─────────────────────────────────────────── */}
-      <Card className="shadow-sm border-blue-100">
+      <Card className="shadow-sm border-sp-blue/20">
         <CardHeader className="border-b border-gray-200">
           <CardTitle className="flex items-center gap-2">
-            <RefreshCw className="w-5 h-5 text-blue-600" />
+            <RefreshCw className="w-5 h-5 text-sp-blue" />
             Sincronización ERP
           </CardTitle>
         </CardHeader>
@@ -96,7 +96,7 @@ export default function Settings() {
             <Button
               onClick={handleRunETL}
               disabled={etlRunning}
-              className="shrink-0 bg-blue-600 hover:bg-blue-700"
+              className="shrink-0 bg-sp-blue hover:bg-sp-blue-hover text-white"
             >
               {etlRunning ? (
                 <><Loader className="w-4 h-4 mr-2 animate-spin" />Iniciando…</>
@@ -107,7 +107,7 @@ export default function Settings() {
           </div>
 
           {etlMessage && (
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm text-blue-700">
+            <div className="bg-sp-blue-light border border-sp-blue/20 rounded-lg p-3 text-sm text-sp-navy">
               {etlMessage}
             </div>
           )}
@@ -144,7 +144,7 @@ export default function Settings() {
                       {entry.filas_error > 0 ? (
                         <XCircle className="w-4 h-4 text-red-500 shrink-0" />
                       ) : (
-                        <CheckCircle className="w-4 h-4 text-green-500 shrink-0" />
+                        <CheckCircle className="w-4 h-4 text-sp-blue shrink-0" />
                       )}
                       <span className="font-mono text-gray-700 text-xs">{entry.tabla_destino}</span>
                     </div>

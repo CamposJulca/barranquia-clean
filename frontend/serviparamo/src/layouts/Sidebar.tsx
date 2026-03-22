@@ -25,23 +25,24 @@ export default function Sidebar() {
   const location = useLocation();
 
   return (
-    <div className="flex flex-col w-64 bg-green-900 text-white border-r border-green-800 h-screen">
-      
-      {/* HEADER */}
-      <div className="flex items-center h-16 px-6 border-b border-green-800">
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg bg-green-500 flex items-center justify-center">
-            <span className="text-white font-semibold">S</span>
+    <div className="flex flex-col w-64 bg-sp-navy text-white border-r border-sp-navy-border h-screen">
+
+      {/* HEADER — logo institucional */}
+      <div className="flex items-center h-16 px-5 border-b border-sp-navy-border">
+        <div className="flex items-center gap-3">
+          {/* Ícono con acento cyan — evoca la flecha del logo */}
+          <div className="w-9 h-9 rounded-lg bg-sp-blue flex items-center justify-center shrink-0">
+            <span className="text-white font-bold text-base leading-none">SP</span>
           </div>
           <div>
-            <h1 className="font-semibold text-white">Serviparamo</h1>
-            <p className="text-xs text-green-200">AI Catalog Manager</p>
+            <h1 className="font-bold text-white text-sm tracking-wide uppercase">Serviparamo</h1>
+            <p className="text-xs text-sp-cyan">Gestor de Catálogo IA</p>
           </div>
         </div>
       </div>
 
       {/* NAV */}
-      <nav className="flex-1 px-3 py-4 space-y-1">
+      <nav className="flex-1 px-3 py-4 space-y-0.5">
         {navigation.map((item) => {
           const isActive =
             location.pathname === item.href ||
@@ -52,27 +53,30 @@ export default function Sidebar() {
             <Link
               key={item.name}
               to={item.href}
-              className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${
+              className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors ${
                 isActive
-                  ? "bg-green-600 text-white shadow-md"
-                  : "text-green-100 hover:bg-green-800 hover:text-white"
+                  ? "bg-sp-blue text-white shadow-md"
+                  : "text-white/70 hover:bg-sp-navy-dark hover:text-white"
               }`}
             >
-              <Icon className="w-5 h-5" />
+              <Icon className={`w-4.5 h-4.5 shrink-0 ${isActive ? "text-sp-cyan" : ""}`} />
               <span className="text-sm font-medium">{item.name}</span>
+              {isActive && (
+                <span className="ml-auto w-1 h-4 rounded-full bg-sp-cyan" />
+              )}
             </Link>
           );
         })}
       </nav>
 
       {/* FOOTER */}
-      <div className="px-3 py-4 border-t border-green-800">
+      <div className="px-3 py-4 border-t border-sp-navy-border">
         <a
           href="http://localhost:5175"
-          className="flex items-center gap-3 px-3 py-2 rounded-lg text-green-100 hover:bg-green-800 hover:text-white transition-colors"
+          className="flex items-center gap-3 px-3 py-2 rounded-lg text-white/60 hover:bg-sp-navy-dark hover:text-white transition-colors"
         >
-          <ArrowLeft className="w-5 h-5" />
-          <span className="text-sm font-medium">Volver</span>
+          <ArrowLeft className="w-4.5 h-4.5" />
+          <span className="text-sm font-medium">Volver al Hub</span>
         </a>
       </div>
     </div>

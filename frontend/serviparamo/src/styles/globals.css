@@ -1,12 +1,32 @@
 @import "tailwindcss";
 
 /* =========================
+   PALETA INSTITUCIONAL SERVIPARAMO
+   Fuente: https://www.serviparamo.com.co
+   - Azul marino  #1a2d4e  (logo, sidebar)
+   - Azul primario #066aab  (botones, activos, CTAs)
+   - Celeste acento #4bafd6 (highlights, bordes activos)
+========================= */
+
+@theme {
+  --color-sp-navy:        #1a2d4e;
+  --color-sp-navy-dark:   #111e35;
+  --color-sp-navy-border: #253654;
+  --color-sp-blue:        #066aab;
+  --color-sp-blue-hover:  #055990;
+  --color-sp-blue-light:  #dceef8;
+  --color-sp-cyan:        #4bafd6;
+  --color-sp-cyan-light:  #e8f6fc;
+  --color-sp-bg:          #f0f6fb;
+}
+
+/* =========================
    BASE
 ========================= */
 
 :root {
-  --background: #f8fafc;
-  --foreground: #020617;
+  --background: #f0f6fb;
+  --foreground: #0f1c2e;
 }
 
 /* =========================
