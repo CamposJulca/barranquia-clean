@@ -83,7 +83,77 @@ services:
     networks:
       - ruta-ia-net
 
-  # ── NGINX (reverse proxy) ─────────────────────────────────────────────────
+  # ── AVANTIKA BACKEND (Django autónomo — puerto 8002) ─────────────────────
+  avantika-backend:
+    build:
+      context: ..
+      dockerfile: avantika/infra/Dockerfile.backend
+    container_name: barranquia_avantika_backend
+    restart: unless-stopped
+    environment:
+      DJANGO_SETTINGS_MODULE: core.settings
+      DB_HOST: postgres
+      DB_NAME: avantika
+      DB_USER: ${AVANTIKA_DB_USER:-avantika}
+      DB_PASSWORD: ${AVANTIKA_DB_PASSWORD:-}
+      SECRET_KEY: ${AVANTIKA_SECRET_KEY:-fallback-insecure-key}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "8002:8002"
+    networks:
+      - ruta-ia-net
+
+  # ── AVANTIKA FRONTEND (React SPA) ────────────────────────────���───────────
+  avantika-frontend:
+    build:
+      context: ..
+      dockerfile: avantika/infra/Dockerfile.frontend
+      args:
+        VITE_API_URL: ""
+        VITE_API_TIMEOUT: "15000"
+    container_name: barranquia_avantika_frontend
+    restart: unless-stopped
+    networks:
+      - ruta-ia-net
+
+  # ── JOZ BACKEND (Django autónomo — puerto 8003) ───────────────────────────
+  joz-backend:
+    build:
+      context: ..
+      dockerfile: joz/infra/Dockerfile.backend
+    container_name: barranquia_joz_backend
+    restart: unless-stopped
+    environment:
+      DJANGO_SETTINGS_MODULE: core.settings
+      DB_HOST: postgres
+      DB_NAME: joz
+      DB_USER: ${JOZ_DB_USER:-joz}
+      DB_PASSWORD: ${JOZ_DB_PASSWORD:-}
+      SECRET_KEY: ${JOZ_SECRET_KEY:-fallback-insecure-key}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "8003:8003"
+    networks:
+      - ruta-ia-net
+
+  # ── JOZ FRONTEND (React SPA) ──────────────────────────────────────────────
+  joz-frontend:
+    build:
+      context: ..
+      dockerfile: joz/infra/Dockerfile.frontend
+      args:
+        VITE_API_URL: ""
+        VITE_API_TIMEOUT: "15000"
+    container_name: barranquia_joz_frontend
+    restart: unless-stopped
+    networks:
+      - ruta-ia-net
+
+  # ── NGINX (reverse proxy) ─────────────────────────────────────���───────────
   nginx:
     image: nginx:alpine
     container_name: barranquia_nginx
@@ -96,14 +166,12 @@ services:
       - hub-backend
       - serviparamo-backend
       - serviparamo-frontend
+      - avantika-backend
+      - avantika-frontend
+      - joz-backend
+      - joz-frontend
     networks:
       - ruta-ia-net
-
-  # ── MÓDULOS PENDIENTES (sin backend implementado aún) ────────────────────
-  # avantika-backend:   # FastAPI — pendiente implementación
-  # avantika-frontend:  # React   — pendiente implementación
-  # joz-backend:        # FastAPI — pendiente implementación
-  # joz-frontend:       # React   — pendiente implementación
 
 networks:
   ruta-ia-net:
