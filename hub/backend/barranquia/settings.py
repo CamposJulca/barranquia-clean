@@ -21,7 +21,6 @@ INSTALLED_APPS = [
     'rest_framework.authtoken',
     'corsheaders',
     'api',
-    'serviparamo',
 ]
 
 MIDDLEWARE = [

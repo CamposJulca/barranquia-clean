@@ -7,7 +7,6 @@ from django.conf.urls.static import static
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/', include('api.urls')),
-    path('api/serviparamo/', include('serviparamo.urls')),
 ]
 
 # Catch-all: serve React frontend for all non-API routes
