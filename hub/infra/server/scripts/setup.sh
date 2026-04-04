@@ -2,33 +2,75 @@
 set -e
 BASE=/home/desarrollo/barranquIA-clean
 
-echo "=== BarranquIA Hub Setup ==="
+echo "=== BarranquIA Hub Setup (bare-metal) ==="
 
-# Create Python virtual environment
-cd $BASE/backend/hub
+# ── Hub Backend ───────────────────────────────────────────────────────────────
+echo "--- Hub Backend ---"
+cd $BASE/hub/backend
 python3 -m venv venv
 source venv/bin/activate
-
-# Install Python dependencies
 pip install -r requirements.txt
-
-# Django setup
 python manage.py collectstatic --noinput
 python manage.py migrate
+deactivate
 
-echo "=== Backend ready ==="
-
-# Frontend build
-cd $BASE/frontend/hub
+# ── Hub Frontend ──────────────────────────────────────────────────────────────
+echo "--- Hub Frontend ---"
+cd $BASE/hub/frontend
 npm install
 npm run build
 
-echo "=== Frontend built ==="
-echo "=== Setup complete! ==="
+# ── ServiPáramo Backend ───────────────────────────────────────────────────────
+echo "--- ServiPáramo Backend ---"
+cd $BASE/serviparamo/backend
+python3 -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+python manage.py migrate
+deactivate
+
+# ── ServiPáramo Frontend ──────────────────────────────────────────────────────
+echo "--- ServiPáramo Frontend ---"
+cd $BASE/serviparamo/frontend
+npm install
+npm run build
+
+# ── Avantika Backend ──────────────────────────────────────────────────────────
+echo "--- Avantika Backend ---"
+cd $BASE/avantika/backend
+python3 -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+python manage.py migrate
+deactivate
+
+# ── Avantika Frontend ─────────────────────────────────────────────────────────
+echo "--- Avantika Frontend ---"
+cd $BASE/avantika/frontend
+npm install
+npm run build
+
+# ── Joz Backend ───────────────────────────────────────────────────────────────
+echo "--- Joz Backend ---"
+cd $BASE/joz/backend
+python3 -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+python manage.py migrate
+deactivate
+
+# ── Joz Frontend ──────────────────────────────────────────────────────────────
+echo "--- Joz Frontend ---"
+cd $BASE/joz/frontend
+npm install
+npm run build
+
 echo ""
-echo "Next steps:"
-echo "1. sudo cp $BASE/infra/nginx/barranquia-hub.conf /etc/nginx/sites-available/barranquia-hub"
-echo "2. sudo ln -sf /etc/nginx/sites-available/barranquia-hub /etc/nginx/sites-enabled/"
-echo "3. sudo nginx -t && sudo systemctl reload nginx"
-echo "4. sudo cp $BASE/infra/systemd/barranquia-hub.service /etc/systemd/system/"
-echo "5. sudo systemctl daemon-reload && sudo systemctl enable --now barranquia-hub"
+echo "=== Setup completo ==="
+echo ""
+echo "Pasos siguientes (nginx + systemd):"
+echo "  sudo cp $BASE/hub/infra/server/nginx/barranquia-hub.conf /etc/nginx/sites-available/barranquia-hub"
+echo "  sudo ln -sf /etc/nginx/sites-available/barranquia-hub /etc/nginx/sites-enabled/"
+echo "  sudo nginx -t && sudo systemctl reload nginx"
+echo "  sudo cp $BASE/hub/infra/server/systemd/barranquia-hub.service /etc/systemd/system/"
+echo "  sudo systemctl daemon-reload && sudo systemctl enable --now barranquia-hub"

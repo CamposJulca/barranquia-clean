@@ -14,6 +14,7 @@ services:
       POSTGRES_PASSWORD: ${DB_PASSWORD:-Barranquia2024Hub}
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      - ../shared/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
     networks:
       - ruta-ia-net
     healthcheck:
@@ -57,7 +58,7 @@ services:
       DB_HOST: postgres
       DB_NAME: serviparamo
       DB_USER: ${SERVIPARAMO_DB_USER:-serviparamo}
-      DB_PASSWORD: ${SERVIPARAMO_DB_PASSWORD:-}
+      DB_PASSWORD: ${SERVIPARAMO_DB_PASSWORD:-serviparamo2024}
       SECRET_KEY: ${SERVIPARAMO_SECRET_KEY:-fallback-insecure-key}
       SERVIPARAMO_ERP_PASS: ${SERVIPARAMO_ERP_PASS:-}
     depends_on:
@@ -95,7 +96,7 @@ services:
       DB_HOST: postgres
       DB_NAME: avantika
       DB_USER: ${AVANTIKA_DB_USER:-avantika}
-      DB_PASSWORD: ${AVANTIKA_DB_PASSWORD:-}
+      DB_PASSWORD: ${AVANTIKA_DB_PASSWORD:-avantika2024}
       SECRET_KEY: ${AVANTIKA_SECRET_KEY:-fallback-insecure-key}
     depends_on:
       postgres:
@@ -130,7 +131,7 @@ services:
       DB_HOST: postgres
       DB_NAME: joz
       DB_USER: ${JOZ_DB_USER:-joz}
-      DB_PASSWORD: ${JOZ_DB_PASSWORD:-}
+      DB_PASSWORD: ${JOZ_DB_PASSWORD:-joz2024}
       SECRET_KEY: ${JOZ_SECRET_KEY:-fallback-insecure-key}
     depends_on:
       postgres:
