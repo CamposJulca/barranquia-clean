@@ -20,14 +20,14 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # ── Python deps ───────────────────────────────────────────────────────────────
-COPY backend/hub/requirements.txt .
+COPY hub/backend/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 # ── App source ────────────────────────────────────────────────────────────────
-COPY backend/hub/ .
+COPY hub/backend/ .
 
 # ── Entrypoint ────────────────────────────────────────────────────────────────
-COPY docker/hub/entrypoint.sh /entrypoint.sh
+COPY hub/infra/docker/entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
 EXPOSE 8005
