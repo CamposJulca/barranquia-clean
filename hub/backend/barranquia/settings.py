@@ -40,7 +40,7 @@ ROOT_URLCONF = 'barranquia.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [BASE_DIR / 'staticfiles' / 'frontend'],
+        'DIRS': [BASE_DIR / 'frontend-dist'],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -80,6 +80,9 @@ USE_TZ = True
 
 STATIC_URL = '/static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
+
+# Sirve /assets/... y otros archivos del frontend React directamente en la raíz
+WHITENOISE_ROOT = BASE_DIR / 'frontend-dist'
 
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 

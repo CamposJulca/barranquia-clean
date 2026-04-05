@@ -23,14 +23,6 @@ const SERVICES = [
     externalUrl: 'http://localhost:5174',
   },
   {
-    id: 'powerbi',
-    name: 'Power BI',
-    description: 'Reportes y dashboards',
-    icon: '📈',
-    color: '#ff6b6b',
-    externalUrl: 'https://app.powerbi.com',
-  },
-  {
     id: 'serviparamo',
     name: 'ServiPáramo',
     description: 'Normalización de catálogo SKUs',

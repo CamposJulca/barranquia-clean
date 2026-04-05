@@ -1,51 +1,53 @@
 # Arquitectura de Software — BarranquIA Hub
 
-**Versión:** 2.0
-**Fecha:** 2026-03-22
-**Estado:** Sprint 1 completado
+**Versión:** 3.0
+**Fecha:** 2026-04-05
+**Estado:** Arquitectura multi-microservicio operativa
 
 ---
 
 ## 1. Estilo Arquitectónico
 
-BarranquIA Hub adopta un estilo de **Micro-Frontend + Django Monolito Modular**, con un hub de autenticación centralizado y módulos de negocio como SPAs independientes.
+BarranquIA Hub adopta un estilo de **microservicios + micro-frontends**, donde cada módulo de negocio es completamente autónomo: tiene su propio backend Django, frontend React, base de datos PostgreSQL y contenedor Docker.
 
-Cada módulo (ServiPáramo, Avantika, Joz) es una aplicación React independiente que se integra al ecosistema mediante:
+Un Nginx en el servidor físico actúa como API Gateway y enruta las peticiones según el prefijo de URL. El Hub centraliza únicamente la autenticación.
 
-1. **Autenticación compartida** vía Token DRF (Hub como Identity Provider único)
-2. **Enrutamiento por prefijo de URL** (Nginx como API Gateway)
-3. **Backend modular** en Django (`INSTALLED_APPS`), extraíble como microservicio cuando escale
-4. **Despliegue containerizado** con Docker Compose
-
-Este patrón permite que equipos independientes desarrollen e iteren cada módulo sin afectar a los demás, con mínima fricción operativa en las fases tempranas del proyecto.
+**Principios guía:**
+- **Autonomía:** cada microservicio puede desplegarse, escalar y fallar de forma independiente
+- **Bajo acoplamiento:** los módulos solo dependen del Hub para autenticación; no se llaman entre sí
+- **Alta cohesión:** cada módulo agrupa su frontend, backend, modelos y documentación en un directorio propio
+- **Stateless API:** cada request incluye el token; no se mantiene estado de sesión en el servidor
 
 ---
 
 ## 2. Vista de Contexto (C4 — Nivel 1)
 
 ```
-┌─────────────────────────────────────────────────────────────────────┐
-│                         INTERNET / LAN                               │
-│                                                                      │
-│   Analistas y operadores de negocio                                  │
-│            │                                                         │
-│            │  HTTPS (ngrok) / HTTP (LAN :9005)                      │
-│            ▼                                                         │
-│   ┌─────────────────────────────────────────────────────────────┐   │
-│   │                    BarranquIA Hub                            │   │
-│   │          Plataforma centralizada de servicios IA             │   │
-│   │                                                              │   │
-│   │  • Autenticación unificada (Token DRF)                       │   │
-│   │  • Catálogo de módulos de negocio                            │   │
-│   │  • Enrutamiento hacia módulos especializados                 │   │
-│   └─────────────────────────────────────────────────────────────┘   │
-│         │                │                │               │          │
-│    ServiPáramo        Avantika           Joz           Power BI     │
-│   (Catálogo IA)    (Inventario)       (Alertas)          (BI)       │
-│                                                                      │
-│                                             SQL Server (ERP externo)│
-│                                             ts1.serviparamo.com.co  │
-└─────────────────────────────────────────────────────────────────────┘
+╔══════════════════════════════════════════════════════════════════════════╗
+║                        ENTORNO EXTERNO                                   ║
+║                                                                          ║
+║   Analistas · Operadores · Gerentes de empresa cliente                   ║
+║             │                                                            ║
+║             │  HTTPS  (barranquia-hub.ngrok.io)                         ║
+║             │  HTTP   (192.168.0.101:9005 — red LAN)                    ║
+║             ▼                                                            ║
+║  ┌──────────────────────────────────────────────────────────────────┐   ║
+║  │                        BarranquIA Hub                             │   ║
+║  │                                                                   │   ║
+║  │  Plataforma centralizada de servicios de inteligencia artificial  │   ║
+║  │  para empresas en Barranquilla, Colombia                          │   ║
+║  │                                                                   │   ║
+║  │  • Autenticación unificada (Token DRF)                            │   ║
+║  │  • Portal de acceso a módulos de negocio                          │   ║
+║  │  • Enrutamiento hacia aplicaciones especializadas                 │   ║
+║  └──────────────────────────────────────────────────────────────────┘   ║
+║         │            │              │              │                      ║
+║      ServiPáramo          Avantika              Joz                     ║
+║    (Catálogo SKU)       (Inventario)         (Alertas)                  ║
+║                                                                          ║
+║                                           ERP SQL Server externo        ║
+║                                           ts1.serviparamo.com.co:1433   ║
+╚══════════════════════════════════════════════════════════════════════════╝
 ```
 
 ---
@@ -53,391 +55,440 @@ Este patrón permite que equipos independientes desarrollen e iteren cada módul
 ## 3. Vista de Contenedores (C4 — Nivel 2)
 
 ```
-┌─────────────────────────────────────────────────────────────────────────────────┐
-│  BarranquIA Hub — Sistema completo (red Docker: ruta-ia-net)                    │
-│                                                                                 │
-│  ┌──────────────────────────────────────────────────────────────────────────┐   │
-│  │  nginx  :9005  (API Gateway + Proxy Inverso)                             │   │
-│  │                                                                          │   │
-│  │  /api/*              → http://hub-backend:8005/api/                      │   │
-│  │  /admin/*            → http://hub-backend:8005/admin/                    │   │
-│  │  /static/*           → http://hub-backend:8005/static/                   │   │
-│  │  /serviparamo/*      → http://serviparamo-frontend:80/                   │   │
-│  │  /                   → http://hub-backend:8005  (Hub React SPA)          │   │
-│  └──────────────────────────────────────────────────────────────────────────┘   │
-│          │                                    │                                  │
-│          ▼                                    ▼                                  │
-│  ┌───────────────────────────┐   ┌────────────────────────────────────────────┐ │
-│  │  serviparamo-frontend     │   │  hub-backend  :8005                        │ │
-│  │  Nginx (alpine)           │   │  Python 3.11 + Django 4.2 + Gunicorn       │ │
-│  │  React 19 + TypeScript    │   │                                            │ │
-│  │  Vite build (dist/)       │   │  Apps Django:                              │ │
-│  │  Base: /serviparamo/      │   │  ├── api/         (Hub Core)               │ │
-│  │                           │   │  └── serviparamo/ (Módulo SKUs)            │ │
-│  │  Páginas:                 │   │                                            │ │
-│  │  /serviparamo/            │   │  Endpoints Hub:                            │ │
-│  │  /serviparamo/catalog     │   │  • POST /api/login/                        │ │
-│  │  /serviparamo/duplicate   │   │  • POST /api/logout/                       │ │
-│  │  /serviparamo/normalization│  │  • GET  /api/health/                       │ │
-│  │  /serviparamo/semantic-*  │   │  • GET  /api/services/                     │ │
-│  │  /serviparamo/purchases   │   │  • GET  /api/verify-token/                 │ │
-│  │  /serviparamo/settings    │   │                                            │ │
-│  └───────────────────────────┘   │  Endpoints ServiPáramo (13):               │ │
-│                                  │  • GET  /api/serviparamo/stats/            │ │
-│                                  │  • GET  /api/serviparamo/skus/             │ │
-│                                  │  • GET  /api/serviparamo/duplicados/       │ │
-│                                  │  • GET  /api/serviparamo/buscar/           │ │
-│                                  │  • POST /api/serviparamo/etl/run/          │ │
-│                                  │  • ... (ver doc ServiPáramo)               │ │
-│                                  │                                            │ │
-│                                  │  ORM: Django ORM                           │ │
-│                                  │  Auth: DRF Token Authentication            │ │
-│                                  │  Caché modelos HF: /root/.cache/hf/        │ │
-│                                  └────────────────────┬───────────────────────┘ │
-│                                                       │                          │
-│                                                       ▼                          │
-│                                          ┌─────────────────────┐                │
-│                                          │  postgres  :5432     │                │
-│                                          │  PostgreSQL 16       │                │
-│                                          │                      │                │
-│                                          │  Tablas Hub:         │                │
-│                                          │  • auth_user         │                │
-│                                          │  • authtoken_token   │                │
-│                                          │                      │                │
-│                                          │  Tablas ServiPáramo: │                │
-│                                          │  • sp_catalogo_skus  │                │
-│                                          │  • sp_embeddings     │                │
-│                                          │  • sp_raw_*  (9)     │                │
-│                                          │  • sp_etl_log        │                │
-│                                          └─────────────────────┘                │
-│                                                                                 │
-│  Volumes:                                                                       │
-│  • postgres_data        → datos persistentes PostgreSQL                         │
-│  • huggingface_cache    → modelos NLP descargados (~90MB)                       │
-└─────────────────────────────────────────────────────────────────────────────────┘
+Servidor físico: 192.168.0.101 (Ubuntu Linux)
+│
+├── [ngrok] barranquia-hub.ngrok.io → localhost:9005
+│
+└── [Nginx :9005]  ← API Gateway (bare-metal, no Docker)
+      │
+      │ Enrutamiento por prefijo de URL
+      │
+      ├─────────────────────────────────────────────────────────────────────┐
+      │  /api/serviparamo/*  →  127.0.0.1:8001                            │
+      │  /api/avantika/*     →  127.0.0.1:8012                            │
+      │  /api/joz/*          →  127.0.0.1:8003                            │
+      │  /api/*              →  127.0.0.1:8006   (Hub API)                │
+      │  /serviparamo/*      →  127.0.0.1:9021   (ServiPáramo SPA)       │
+      │  /avantika/*         →  127.0.0.1:9022   (Avantika SPA)          │
+      │  /joz/*              →  127.0.0.1:9023   (Joz SPA)               │
+      │  /admin/*            →  127.0.0.1:8006   (Django Admin)          │
+      │  /*                  →  127.0.0.1:8006   (Hub React SPA)          │
+      └─────────────────────────────────────────────────────────────────────┘
+             │
+             ▼  Docker Compose (red: ruta-ia-net)
+      ┌──────────────────────────────────────────────────────────────────────┐
+      │                                                                      │
+      │  ┌─────────────────┐     ┌─────────────────┐                        │
+      │  │  hub-backend    │     │serviparamo-     │                        │
+      │  │  :8006→:8005    │     │backend :8001    │                        │
+      │  │                 │     │                 │                        │
+      │  │ Django 4.2      │     │ Django 4.2      │                        │
+      │  │ Gunicorn 3w     │     │ Gunicorn 3w     │                        │
+      │  │                 │     │                 │                        │
+      │  │ App: api/       │     │ App: serviparamo│                        │
+      │  │ Auth DRF Token  │     │ 12 modelos      │                        │
+      │  │ 4 endpoints     │     │ 13 endpoints    │                        │
+      │  │ Hub React SPA   │     │ ETL + Embeddings│                        │
+      │  │ (WhiteNoise)    │     │ (sentence-trf.) │                        │
+      │  └────────┬────────┘     └────────┬────────┘                        │
+      │           │                       │                                  │
+      │  ┌─────────────────┐     ┌─────────────────┐                        │
+      │  │serviparamo-     │     │ avantika-       │                        │
+      │  │frontend :9021   │     │ backend :8012   │                        │
+      │  │                 │     │                 │                        │
+      │  │ Nginx Alpine    │     │ Django 4.2      │                        │
+      │  │ React 19 + TS   │     │ Gunicorn 3w     │                        │
+      │  │ Tailwind 4      │     │                 │                        │
+      │  │ Zustand + Recharts    │ App: avantika   │                        │
+      │  │ 7 páginas       │     │ 3 modelos       │                        │
+      │  └─────────────────┘     │ 6 endpoints     │                        │
+      │                          │ SKU + Forecast  │                        │
+      │  ┌─────────────────┐     └────────┬────────┘                        │
+      │  │ avantika-       │              │                                  │
+      │  │ frontend :9022  │     ┌─────────────────┐                        │
+      │  │                 │     │  joz-backend    │                        │
+      │  │ Nginx Alpine    │     │  :8003          │                        │
+      │  │ React 19        │     │                 │                        │
+      │  │ Radix UI        │     │ Django 4.2      │                        │
+      │  │ 3 páginas       │     │ Gunicorn 3w     │                        │
+      │  └─────────────────┘     │                 │                        │
+      │                          │ App: joz        │                        │
+      │  ┌─────────────────┐     │ 3 modelos       │                        │
+      │  │  joz-frontend   │     │ 6 endpoints     │                        │
+      │  │  :9023          │     │ Alertas + Riesgos│                       │
+      │  │                 │     └────────┬────────┘                        │
+      │  │ Nginx Alpine    │              │                                  │
+      │  │ React 19        │             ─┘                                  │
+      │  │ Recharts        │    ┌──────────────────────────────────┐        │
+      │  │ 4 páginas       │    │  postgres  :5432 (solo interno)  │        │
+      │  └─────────────────┘    │  PostgreSQL 16 Alpine            │        │
+      │                          │                                  │        │
+      │                          │  BD: barranquia_hub (Hub)        │        │
+      │                          │  BD: serviparamo  (ServiPáramo) │        │
+      │                          │  BD: avantika     (Avantika)    │        │
+      │                          │  BD: joz          (Joz)         │        │
+      │                          └──────────────────────────────────┘        │
+      │                                                                      │
+      │  Volúmenes Docker:                                                   │
+      │  • postgres_data        → persistencia de las 4 BDs                 │
+      │  • huggingface_cache    → modelo NLP all-MiniLM-L6-v2 (~90MB)      │
+      └──────────────────────────────────────────────────────────────────────┘
 
-Sistema Externo:
-┌──────────────────────────────────┐
-│  SQL Server ERP ServiPáramo      │
-│  ts1.serviparamo.com.co:1433     │
-│  Base: PRUEBA                    │
-│  Tabla: inv_ina01 (127K filas)   │
-│  Conexión: pyodbc + ODBC Driver  │
-└──────────────────────────────────┘
+Sistema externo:
+┌──────────────────────────────────────┐
+│  ERP SQL Server ServiPáramo          │
+│  ts1.serviparamo.com.co:1433         │
+│  BD: PRUEBA                          │
+│  Tablas: inv_ina01 (~127K filas)     │
+│  Conexión: pyodbc + ODBC Driver 18   │
+└──────────────────────────────────────┘
          ↑
-         │ ETL on-demand (via API o Makefile)
-         │
-   hub-backend (etl.py)
+         │ ETL on-demand (hilo background)
+   serviparamo-backend (etl.py)
 ```
 
 ---
 
-## 4. Topología de Despliegue
-
-### 4.1 Despliegue con Docker (modo desarrollo / demo)
+## 4. Vista de Componentes — Hub Backend (C4 — Nivel 3)
 
 ```
-Servidor físico: 192.168.0.101
-├── Docker Engine
-│   └── docker-compose.yml (red: ruta-ia-net)
-│       ├── postgres          :5432  → volumen postgres_data
-│       ├── hub-backend       :8005  → volumen huggingface_cache
-│       ├── serviparamo-frontend :80
-│       └── nginx             :9005  (expuesto al host)
+hub-backend [:8005 container]
 │
-└── ngrok → barranquia-hub.ngrok.io → localhost:9005
+├── barranquia/wsgi.py              ← Punto de entrada WSGI
+│
+├── barranquia/urls.py              ← Enrutador raíz
+│     ├── /admin/        → Django Admin
+│     ├── /api/          → api.urls
+│     └── /(catch-all)   → TemplateView (index.html Hub React SPA)
+│
+├── api/urls.py
+│     ├── POST /api/login/          → LoginView
+│     ├── POST /api/logout/         → LogoutView
+│     ├── GET  /api/health/         → HealthView
+│     └── GET  /api/services/       → ServicesView
+│
+├── api/views.py
+│     ├── LoginView      ← authenticate() + Token.get_or_create()
+│     ├── LogoutView     ← token.delete()
+│     ├── HealthView     ← { status: "ok" }
+│     └── ServicesView   ← SERVICES_DATA (lista de módulos hardcoded)
+│
+├── barranquia/settings.py
+│     ├── DATABASES → barranquia_hub (PostgreSQL)
+│     ├── WHITENOISE_ROOT = frontend-dist/  (sirve /assets/...)
+│     ├── TEMPLATES.DIRS = [frontend-dist/] (sirve index.html)
+│     └── REST_FRAMEWORK: TokenAuthentication
+│
+└── staticfiles/    ← Django collectstatic (admin + DRF styles)
+    frontend-dist/  ← React SPA compilado (preservado fuera de STATIC_ROOT)
+        ├── index.html
+        └── assets/index-*.js, index-*.css
 ```
-
-### 4.2 Despliegue Bare-Metal (modo producción)
-
-```
-Servidor físico: 192.168.0.101 (Linux Ubuntu)
-│
-├── PostgreSQL :5432 (servicio local)
-│
-├── Gunicorn :8005  (gestionado por SystemD)
-│   └── barranquia-hub.service
-│       └── 3 workers → barranquia.wsgi:application
-│
-├── Nginx :9005  (configuración: barranquia-hub.conf)
-│   ├── /api/           → proxy 127.0.0.1:8005
-│   ├── /serviparamo/   → dist/ compilado (archivos estáticos)
-│   └── /               → Hub React SPA (staticfiles)
-│
-└── ngrok  (barranquia-ngrok.service)
-    └── barranquia-hub.ngrok.io → localhost:9005
-```
-
-### 4.3 Acceso
-
-| Entorno | URL |
-|---|---|
-| Red local (LAN) | `http://192.168.0.101:9005` |
-| Externo (ngrok) | `https://barranquia-hub.ngrok.io` |
 
 ---
 
-## 5. Flujo de Red y Autenticación
+## 5. Vista de Componentes — ServiPáramo Backend (C4 — Nivel 3)
+
+```
+serviparamo-backend [:8001]
+│
+├── core/urls.py
+│     └── /api/serviparamo/ → serviparamo.urls
+│
+├── serviparamo/urls.py  (13 endpoints)
+│     ├── GET  /stats/
+│     ├── GET  /skus/           ← paginado, filtrable
+│     ├── GET  /skus/<codigo>/
+│     ├── GET  /familias/
+│     ├── GET  /categorias/
+│     ├── GET  /ordenes/
+│     ├── GET  /pedidos/
+│     ├── GET  /duplicados/
+│     ├── POST /aprobar/
+│     ├── POST /fusionar-familias/
+│     ├── GET  /etl/status/
+│     ├── POST /etl/run/        ← lanza Thread background
+│     └── GET  /buscar/         ← búsqueda semántica
+│
+├── serviparamo/etl.py           ← ETL SQL Server → PostgreSQL
+│     └── pyodbc → extract → clean → insert Raw* → generate_embeddings
+│
+├── serviparamo/embeddings.py    ← sentence-transformers
+│     └── SentenceTransformer('all-MiniLM-L6-v2') → vector 384 dims
+│
+├── serviparamo/normalizer.py    ← sklearn
+│     └── cosine_similarity() → detectar duplicados (umbral 0.85)
+│
+└── serviparamo/models.py        ← 12 modelos Django
+      CatalogoSKU, CatalogoEmbedding
+      RawCategoria, RawFamilia
+      RawOrdenEncabezado/Detalle
+      RawPedidoEncabezado/Detalle
+      RawPresupuestoDetalle/Resumen
+      RawKardex, ETLLog
+```
+
+---
+
+## 6. Vista de Capas — Todos los Microservicios
+
+```
+┌───────────────────────────────────────────┐
+│              Cliente HTTP                 │  Browser (React SPA)
+└──────────────────────┬────────────────────┘
+                       │ HTTPS
+┌──────────────────────▼────────────────────┐
+│          ngrok (tunnel HTTPS)             │
+└──────────────────────┬────────────────────┘
+                       │ HTTP
+┌──────────────────────▼────────────────────┐
+│         Nginx :9005 (API Gateway)         │  Enrutamiento por prefijo URL
+│         bare-metal en servidor físico     │  SSL termination
+└──────────────────────┬────────────────────┘
+                       │ HTTP interno (127.0.0.1)
+         ┌─────────────┼──────────────┬──────────────┐
+         ▼             ▼              ▼              ▼
+   [hub :8006]  [serviparamo:8001] [avantika:8012] [joz:8003]
+   [hub-front]  [sp-front:9021]   [av-front:9022] [joz-front:9023]
+         │             │              │              │
+┌────────▼─────────────▼──────────────▼──────────────▼────────┐
+│              Capa de Presentación (DRF Views)                 │
+│   api/views.py  serviparamo/views.py  avantika/views.py  ...  │
+└─────────────────────────────┬────────────────────────────────┘
+                               │
+┌─────────────────────────────▼────────────────────────────────┐
+│              Capa de Serialización (DRF Serializers)          │
+│             Validación y transformación de datos              │
+└─────────────────────────────┬────────────────────────────────┘
+                               │
+┌─────────────────────────────▼────────────────────────────────┐
+│                   Capa de Negocio                             │
+│  DRF Token Auth · ETL (etl.py) · Embeddings · Clustering     │
+│  Clasificación ABC · Pronóstico demanda · Detección anomalías │
+└─────────────────────────────┬────────────────────────────────┘
+                               │
+┌─────────────────────────────▼────────────────────────────────┐
+│                   Capa de Datos (Django ORM)                  │
+│                                                               │
+│  barranquia_hub │ serviparamo │ avantika │ joz               │
+│  auth_user      │ CatalogoSKU │ SKU      │ Transaccion       │
+│  Token          │ Embedding   │ Pronost. │ Alerta            │
+│                 │ Raw* (10)   │ Suger.   │ Riesgo            │
+│                 │ ETLLog      │          │                    │
+└─────────────────────────────┬────────────────────────────────┘
+                               │
+┌─────────────────────────────▼────────────────────────────────┐
+│              PostgreSQL 16 (contenedor Docker)                │
+│              Volumen persistente: postgres_data               │
+└──────────────────────────────────────────────────────────────┘
+                               │
+┌─────────────────────────────▼────────────────────────────────┐
+│              SQL Server ERP (sistema externo)                 │
+│              ts1.serviparamo.com.co:1433                      │
+│              Acceso via pyodbc — solo desde serviparamo-backend│
+└──────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## 7. Flujo de Red y Autenticación
 
 ```
 Usuario
   │
   │  1. GET https://barranquia-hub.ngrok.io
   ▼
-ngrok
-  │  → localhost:9005
+ngrok → localhost:9005
   ▼
 Nginx :9005
   │
-  ├── /                        → Hub React SPA (index.html)
-  │     └── React carga, ejecuta AuthGuard
-  │           │── GET /api/verify-token/ ──────────────────────► Django
-  │           │◄── 200 (token válido) ────────────────────────── Django
-  │           └── renderiza panel de servicios
+  ├── location /  → proxy hub-backend :8006
+  │     └── Django sirve index.html (Hub React SPA via WhiteNoise)
+  │           │
+  │           └── React carga → verifica token en localStorage
+  │                 ├── No hay token → muestra formulario de login
+  │                 └── Hay token  → GET /api/health/ (verifica validez)
   │
-  ├── /api/login/              → Django :8005
-  │     │── POST { username, password }
-  │     │◄── { token, username }
-  │     └── cliente guarda token en localStorage
+  ├── POST /api/login/ → hub-backend :8006
+  │     │── Django authenticate(username, password)
+  │     │── Token.objects.get_or_create(user=user)
+  │     └── { token, username } → cliente guarda en localStorage
   │
-  ├── /serviparamo/*           → serviparamo-frontend :80
-  │     └── React SPA ServiPáramo
-  │           │── GET /api/verify-token/ (Auth Guard)
-  │           └── (si válido) renderiza módulo
-  │
-  └── /api/serviparamo/*       → Django :8005
-        └── lógica de negocio ServiPáramo
-```
-
-### Flujo de autenticación detallado (Hub → Módulo)
-
-```
-[Hub React]       [Nginx :9005]    [Django :8005]    [ServiPáramo React]
-     │                  │                │                    │
-     │─ POST /login/ ──►│──────────────► │                    │
-     │                  │                │ valida credentials │
-     │◄─ { token } ─────│◄────────────── │                    │
-     │                  │                │                    │
-     │  localStorage.setItem('token', token)                  │
-     │                  │                │                    │
-     │  [usuario navega a /serviparamo/] │                    │
-     │                  │                │                    │
-     │                  │                │  ─ GET /serviparamo/ → SPA carga
-     │                  │                │                    │
-     │                  │                │◄ GET /api/verify-token/ ──────
-     │                  │                │  200: token válido            │
-     │                  │                │──────────────────────────────►│
-     │                  │                │                    │ renderiza módulo
+  └── Usuario navega a /serviparamo/ → proxy serviparamo-frontend :9021
+        └── React SPA carga → AuthGuard verifica token
+              │── GET /api/health/ Authorization: Token <token>
+              │◄── 200 → renderiza módulo ServiPáramo completo
+              └── 401 → redirect a https://barranquia-hub.ngrok.io
 ```
 
 ---
 
-## 6. Vista de Componentes — ServiPáramo Frontend (C4 — Nivel 3)
+## 8. Topología de Despliegue
 
 ```
-main.jsx (Vite entry point)
-  └── RouterProvider (React Router v7)
-        └── AuthGuard
-              │── GET /api/verify-token/ → válido: renderiza
-              │                          → inválido: redirect Hub
-              └── DashboardLayout
-                    ├── Header (branding ServiPáramo, usuario, logout)
-                    ├── Sidebar (8 rutas de navegación)
-                    └── <Outlet>
-                          │
-                          ├── /serviparamo/          → Dashboard
-                          │     └── StatCard ×N (KPIs del catálogo)
-                          │
-                          ├── /serviparamo/catalog   → CatalogManager
-                          │     └── CatalogTable (paginada, filtros)
-                          │
-                          ├── /serviparamo/duplicate → DuplicateDetection
-                          │     └── DuplicateComparison
-                          │
-                          ├── /serviparamo/normalization → Normalization
-                          │     └── NormalizationTable
-                          │
-                          ├── /serviparamo/semantic-search → SemanticSearch
-                          │     └── SemanticSearchInput
-                          │
-                          ├── /serviparamo/purchases → PurchasesAnalytics
-                          │     └── PurchasesCharts (Recharts)
-                          │
-                          └── /serviparamo/settings  → Settings
-                                └── SettingsPanel (ETL controls)
+┌─────────────────────────────────────────────────────────────────────┐
+│  Servidor físico: 192.168.0.101 (Ubuntu Linux)                       │
+│                                                                       │
+│  ┌─────────────────────────────────────────────────────────────┐    │
+│  │  ngrok daemon                                                │    │
+│  │  barranquia-hub.ngrok.io → localhost:9005                   │    │
+│  └─────────────────────────────────────────────────────────────┘    │
+│                                                                       │
+│  ┌─────────────────────────────────────────────────────────────┐    │
+│  │  Nginx :9005  (config: barranquia-hub.conf)                  │    │
+│  │  sites-enabled/barranquia-hub                                │    │
+│  └─────────────────────────────────────────────────────────────┘    │
+│                              │                                        │
+│  ┌───────────────────────────▼─────────────────────────────────┐    │
+│  │  Docker Engine                                               │    │
+│  │  Compose file: shared/docker-compose.yml                     │    │
+│  │  Red: ruta-ia-net (bridge, solo internal)                    │    │
+│  │                                                               │    │
+│  │  ┌──────────────┐ ┌──────────────┐ ┌──────────────┐        │    │
+│  │  │ hub-backend  │ │serviparamo-  │ │ avantika-    │        │    │
+│  │  │ :8006→:8005  │ │backend :8001 │ │ backend:8012 │        │    │
+│  │  └──────────────┘ └──────────────┘ └──────────────┘        │    │
+│  │  ┌──────────────┐ ┌──────────────┐ ┌──────────────┐        │    │
+│  │  │serviparamo-  │ │ avantika-    │ │ joz-backend  │        │    │
+│  │  │frontend:9021 │ │ frontend:9022│ │ :8003        │        │    │
+│  │  └──────────────┘ └──────────────┘ └──────────────┘        │    │
+│  │  ┌──────────────┐ ┌─────────────────────────────────┐      │    │
+│  │  │ joz-frontend │ │ postgres :5432  (solo interno)   │      │    │
+│  │  │ :9023        │ │ Vol: postgres_data               │      │    │
+│  │  └──────────────┘ └─────────────────────────────────┘      │    │
+│  │  Vol: huggingface_cache                                      │    │
+│  └─────────────────────────────────────────────────────────────┘    │
+└─────────────────────────────────────────────────────────────────────┘
+                              │
+              Internet  ──────┘  (vía ngrok)
+              LAN       ──────┘  (vía 192.168.0.101:9005)
 ```
-
----
-
-## 7. Vista de Capas — Hub Backend
-
-```
-┌────────────────────────────────────────┐
-│           Cliente HTTP                 │  (React SPA, curl)
-└───────────────────┬────────────────────┘
-                    │ HTTP/JSON
-┌───────────────────▼────────────────────┐
-│          Nginx :9005 (Proxy)           │
-└───────────────────┬────────────────────┘
-                    │ HTTP interno
-┌───────────────────▼────────────────────┐
-│      Capa de Presentación              │  Django REST Framework
-│      api/views.py                      │  login, logout, health,
-│      serviparamo/views.py              │  services, verify-token,
-│                                        │  + 13 endpoints ServiPáramo
-└───────────────────┬────────────────────┘
-                    │
-┌───────────────────▼────────────────────┐
-│      Capa de Serialización             │  serializers.py
-│                                        │  Validación entrada/salida
-└───────────────────┬────────────────────┘
-                    │
-┌───────────────────▼────────────────────┐
-│      Capa de Negocio                   │  DRF Token Auth
-│                                        │  ETL (etl.py)
-│                                        │  Embeddings (embeddings.py)
-│                                        │  Clustering (normalizer.py)
-└───────────────────┬────────────────────┘
-                    │
-┌───────────────────▼────────────────────┐
-│      Capa de Datos                     │  Django ORM + PostgreSQL
-│                                        │  Tablas Hub + ServiPáramo (11)
-└───────────────────┬────────────────────┘
-                    │
-┌───────────────────▼────────────────────┐
-│      Sistema Externo                   │  SQL Server ERP
-│                                        │  pyodbc + ODBC Driver 18
-└────────────────────────────────────────┘
-```
-
----
-
-## 8. Convención de Puertos
-
-| Puerto | Servicio | Entorno |
-|---|---|---|
-| 9005 | Nginx (entrada pública) | Todos |
-| 8005 | Django/Gunicorn (Hub API) | Todos |
-| 5432 | PostgreSQL | Todos |
-| 80 | Nginx interno (serviparamo-frontend) | Docker |
-| 5176 | Vite dev — ServiPáramo Frontend | Desarrollo local |
-| 3000 | Vite dev — Hub Frontend | Desarrollo local |
 
 ---
 
 ## 9. Decisiones Arquitectónicas
 
-### DA-01: Hub como Identity Provider centralizado
+### DA-01: Microservicios completamente independientes
 
-**Decisión:** El hub Django gestiona todos los tokens. Los módulos hijos validan tokens contra `/api/verify-token/`.
+**Decisión:** Cada módulo (ServiPáramo, Avantika, Joz) es un proyecto Django independiente con su propio proceso, base de datos y contenedor Docker. No comparten código de negocio.
 
-**Razón:** Evitar duplicar lógica de autenticación. Un solo punto de invalidación de sesiones.
+**Razón:** Equipos independientes pueden desarrollar, probar y desplegar cada módulo sin afectar a los demás. Fallos de un módulo no propagan al hub.
 
-**Trade-off:** El hub es punto de falla único para autenticación. Mitigado: SystemD con reinicio automático; PostgreSQL como BD robusta.
-
----
-
-### DA-02: Nginx como API Gateway único
-
-**Decisión:** Nginx en `:9005` enruta por prefijo de URL a los servicios backend y frontends.
-
-**Razón:** Un solo puerto expuesto al exterior. Oculta la topología interna (Docker container names, puertos locales). Centraliza SSL termination.
-
-**Trade-off:** Nginx es un componente adicional a mantener. Justificado por la simplicidad que aporta al conjunto.
+**Trade-off:** Más contenedores a gestionar; duplicación de boilerplate Django entre módulos.
 
 ---
 
-### DA-03: Micro-Frontend por módulo (SPA independiente)
+### DA-02: Hub como Identity Provider centralizado
 
-**Decisión:** Cada módulo de negocio es una aplicación React compilada y servida de forma independiente bajo su propio prefijo de ruta.
+**Decisión:** Solo el Hub gestiona la autenticación (DRF Token). Los módulos validan el token consultando al Hub en cada carga.
 
-**Razón:** Equipos distintos pueden desarrollar, iterar y desplegar cada módulo sin afectar a los demás. Stack actualizado (React 19 + TypeScript + Vite 8 + Tailwind 4) sin romper el Hub legacy.
+**Razón:** Un solo punto de gestión de credenciales. Logout centralizado invalida acceso a todos los módulos simultáneamente.
 
-**Trade-off:** Múltiples aplicaciones en desarrollo local. Posible inconsistencia visual si no se siguen las guías de estilo.
-
----
-
-### DA-04: Django Modular (no microservicios en Sprint 1)
-
-**Decisión:** Los módulos de negocio viven como Django apps dentro del mismo proyecto Hub (`INSTALLED_APPS`), no como servicios separados.
-
-**Razón:** La complejidad operativa de microservicios (autenticación inter-servicios, service discovery, despliegue independiente) no justifica el beneficio en las fases iniciales. El código está diseñado para extraerse fácilmente.
-
-**Trade-off:** Un bug grave en un módulo podría afectar al Hub. Mitigado con tests unitarios y manejo de excepciones.
-
-**Evolución:** En Sprints avanzados, cada módulo puede dockerizarse como servicio independiente sin cambiar su código de negocio.
+**Trade-off:** El hub es punto de falla para autenticación. Mitigado: Docker `restart: unless-stopped`.
 
 ---
 
-### DA-05: PostgreSQL como base de datos única
+### DA-03: Nginx bare-metal como API Gateway (no en Docker)
 
-**Decisión:** Un solo contenedor PostgreSQL alberga tanto las tablas del Hub como las de todos los módulos.
+**Decisión:** Nginx corre directamente en el servidor físico, no como contenedor Docker.
 
-**Razón:** Simplicidad operativa en etapas tempranas. Backup y mantenimiento unificado.
+**Razón:** Simplifica la configuración de red. Evita el doble NAT Docker → host → contenedor Nginx. Permite gestionar el gateway con systemd.
 
-**Trade-off:** No hay aislamiento de datos entre módulos. Aceptable dado que el equipo es pequeño y los módulos son del mismo proyecto.
-
-**Evolución:** Si un módulo requiere aislamiento, se puede mover a un PostgreSQL dedicado usando el database router de Django.
+**Trade-off:** El gateway no se puede levantar con `docker compose up`. Requiere gestión separada del servidor.
 
 ---
 
-### DA-06: ETL on-demand (no programado en Sprint 1)
+### DA-04: Base de datos separada por microservicio
 
-**Decisión:** El ETL de SQL Server se dispara manualmente vía API (`POST /api/serviparamo/etl/run/`) o Makefile.
+**Decisión:** PostgreSQL contiene 4 bases de datos independientes (una por microservicio), cada una con su propio usuario y contraseña.
 
-**Razón:** Evita complejidad de Celery/cron en Sprint 1. Permite control explícito durante el desarrollo.
+**Razón:** Aislamiento de datos entre clientes. Un problema de migraciones en ServiPáramo no afecta a Avantika ni Joz.
 
-**Trade-off:** Los datos no se actualizan automáticamente.
-
-**Evolución:** Sprint 2 → ETL programado con cron de Django o Celery Beat.
+**Trade-off:** Complejidad añadida en backups (4 BDs). Mitigado: backup unificado del volumen postgres_data.
 
 ---
 
-## 10. Principios de Diseño
+### DA-05: Micro-frontends servidos por Nginx Alpine
 
-| Principio | Aplicación |
-|---|---|
-| **Separación de responsabilidades** | Hub = autenticación y catálogo; módulos = lógica de negocio específica |
-| **Bajo acoplamiento** | Módulos hijos solo dependen del endpoint `/api/verify-token/` del Hub |
-| **Alta cohesión** | Cada módulo agrupa su propio frontend, backend app, modelos y rutas |
-| **Convention over configuration** | Prefijos de ruta por nombre de módulo (`/serviparamo/`, `/avantika/`) |
-| **Fail fast** | AuthGuard redirige inmediatamente al Hub si el token no es válido |
-| **Stateless API** | Cada request incluye el token; no se mantiene estado de sesión en servidor |
-| **Diseño evolutivo** | Módulos diseñados como apps Django extractibles sin cambiar código de negocio |
+**Decisión:** Cada frontend React se compila en un contenedor multi-stage (Node build → Nginx serve). El Hub sirve su SPA directamente desde Django/WhiteNoise.
+
+**Razón:** Contenedores de frontend son ligeros (~25MB). El Hub mantiene su SPA embebida para evitar una dependencia adicional en el componente crítico de autenticación.
+
+**Trade-off:** El Hub SPA no puede actualizarse sin reconstruir el contenedor del backend.
 
 ---
 
-## 11. Riesgos Arquitectónicos
+### DA-06: ETL on-demand en hilo background
+
+**Decisión:** El ETL de SQL Server se dispara manualmente via API y corre en un `threading.Thread` separado.
+
+**Razón:** Evita la complejidad de Celery/Redis en la fase actual. El proceso ETL puede durar varios minutos y no debe bloquear los workers de Gunicorn.
+
+**Trade-off:** No hay programación automática. Datos no se actualizan solos.
+
+**Evolución:** Celery Beat o cron django programado para Sprint 3.
+
+---
+
+### DA-07: frontend-dist separado de STATIC_ROOT
+
+**Decisión:** El `index.html` del Hub React y sus assets se almacenan en `/app/frontend-dist/` (fuera de `STATIC_ROOT`). WhiteNoise los sirve via `WHITENOISE_ROOT`.
+
+**Razón:** `collectstatic --clear` borra todo el `STATIC_ROOT`. Separar el build del frontend previene que sea eliminado en cada arranque del contenedor.
+
+**Trade-off:** El frontend no pasa por el pipeline de hashing de WhiteNoise (sin cache-busting automático para `index.html`).
+
+---
+
+## 10. Riesgos Arquitectónicos
 
 | Riesgo | Probabilidad | Impacto | Mitigación |
-|---|---|---|---|
-| Hub como SPOF (auth) | Media | Alto | SystemD con restart automático; timeout de token configurable |
-| ETL bloquea el proceso Gunicorn | Baja | Medio | ETL corre en thread separado (background); timeout configurable |
-| Embeddings en PostgreSQL (JSONField) sin índice vectorial | Alta | Medio | Búsqueda semántica limitada a subconjuntos; Sprint 3: pgvector + HNSW |
-| SQL Server ERP no disponible | Media | Alto | ETL con manejo de errores; datos cacheados en PostgreSQL no se pierden |
-| ngrok con URL dinámica | Alta | Bajo | Dominio fijo contratado (`barranquia-hub.ngrok.io`) |
+|--------|-------------|---------|-----------|
+| Hub como SPOF (autenticación) | Media | Alto | Docker `restart: unless-stopped`; PostgreSQL como BD robusta |
+| ETL bloquea proceso si no usa threading | Baja | Alto | ETL corre en `threading.Thread`; timeout configurable |
+| Embeddings en `JSONField` sin índice vectorial | Alta | Medio | Búsqueda limitada a subconjuntos; Sprint 3: pgvector + HNSW |
+| ERP SQL Server no disponible | Media | Alto | Datos cacheados en PostgreSQL; ETL con manejo de errores robusto |
+| ngrok con URL fija pero dependencia externa | Baja | Alto | Dominio fijo contratado; fallback a IP LAN 192.168.0.101:9005 |
+| Contraseñas en variables de entorno | Baja | Alto | `.env` en `.gitignore`; nunca commitear `.env` |
+| CORS_ALLOW_ALL_ORIGINS = True | Alta | Medio | Ajustar a dominios específicos antes de producción real |
+
+---
+
+## 11. Principios de Diseño
+
+| Principio | Aplicación |
+|-----------|-----------|
+| **Separación de responsabilidades** | Hub = auth + catálogo; módulos = lógica de negocio específica |
+| **Bajo acoplamiento** | Módulos solo dependen del endpoint `/api/health/` del Hub |
+| **Alta cohesión** | Cada módulo agrupa su frontend, backend, modelos y rutas |
+| **Fail fast** | AuthGuard redirige al login inmediatamente si el token no es válido |
+| **Stateless API** | Cada request incluye token; no hay sesiones en el servidor |
+| **Convention over configuration** | Prefijos de ruta = nombre del módulo (`/serviparamo/`, `/avantika/`) |
+| **Diseño evolutivo** | Módulos son proyectos Django completos, listos para moverse a su propio cluster |
+| **Isolation** | Cada BD es independiente; fallos de migración de un módulo no afectan a otros |
 
 ---
 
 ## 12. Hoja de Ruta Técnica
 
-### Sprint 2 (23–31 mar 2026)
-- ETL incremental con flag `--keep-aprobados`
-- Tests unitarios de la API ServiPáramo
-- ETL programado (cron o Celery Beat)
-- Dashboard Power BI conectado a la API
+### Sprint 2 (en curso — abril 2026)
+- Completar frontends de Avantika y Joz (conectar con backends reales)
+- ETL incremental ServiPáramo con preservación de SKUs aprobados
+- Roles y permisos de usuario por módulo
+- ETL programado (cron Django o Celery Beat)
 
-### Sprint 3 (abr 2026)
-- pgvector + índice HNSW para búsqueda semántica O(log N)
-- Módulo Avantika (backend FastAPI / Django app)
-- CI/CD básico con GitHub Actions
+### Sprint 3 (mayo 2026)
+- pgvector + índice HNSW para búsqueda semántica O(log N) en ServiPáramo
+- CI/CD básico con GitHub Actions (build + test + deploy)
+- HTTPS con certificado propio (sin ngrok) para producción
 
 ### Producción (post-demo)
-- Módulos como contenedores Docker independientes
-- HTTPS con certificado propio (sin ngrok)
+- CORS configurado a dominios específicos
 - Monitoreo con Grafana + Prometheus
+- Backups automáticos PostgreSQL
+- Secretos en HashiCorp Vault o AWS Secrets Manager
 
 ---
 
 *BarranquIA Hub — Ruta IA × Cámara de Comercio de Barranquilla × Boost Business Consulting*
-*Última actualización: 22 de marzo de 2026*
+*Última actualización: 5 de abril de 2026*

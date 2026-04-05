@@ -26,6 +26,10 @@ RUN pip install --no-cache-dir -r requirements.txt
 # ── App source ────────────────────────────────────────────────────────────────
 COPY hub/backend/ .
 
+# ── Frontend dist (fuera de STATIC_ROOT para sobrevivir collectstatic) ────────
+RUN mkdir -p /app/frontend-dist && \
+    cp -r /app/staticfiles/frontend/. /app/frontend-dist/
+
 # ── Entrypoint ────────────────────────────────────────────────────────────────
 COPY hub/infra/docker/entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh

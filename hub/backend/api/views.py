@@ -25,15 +25,6 @@ SERVICES_DATA = [
         'active': True,
     },
     {
-        'id': 'powerbi',
-        'name': 'Power BI',
-        'description': 'Reportes y dashboards',
-        'icon': '📈',
-        'color': '#ff6b6b',
-        'path': '/powerbi',
-        'active': True,
-    },
-    {
         'id': 'serviparamo',
         'name': 'ServiPáramo',
         'description': 'Servicio de páramos',
