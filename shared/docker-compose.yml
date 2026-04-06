@@ -14,7 +14,7 @@ services:
       POSTGRES_PASSWORD: ${DB_PASSWORD:-Barranquia2024Hub}
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ../shared/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+      - ../shared/postgres/init.sh:/docker-entrypoint-initdb.d/init.sh:ro
     networks:
       - ruta-ia-net
     healthcheck:
