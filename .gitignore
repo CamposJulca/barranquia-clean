@@ -42,6 +42,9 @@ Thumbs.db
 # Logs
 *.log
 
+# Seeds de desarrollo (pueden pesar >100MB)
+**/docs/serviparamo_seed.sql
+
 # Claude settings
 .claude/settings.local.json
 test_db*.py
