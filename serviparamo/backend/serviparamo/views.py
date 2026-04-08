@@ -1,5 +1,8 @@
+import re
+import time
 import threading
 
+from django.db import connection
 from django.db.models import Count, Q
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
@@ -415,3 +418,88 @@ def stats(request):
         'total_ordenes': RawOrdenEncabezado.objects.count(),
         'total_pedidos': RawPedidoEncabezado.objects.count(),
     })
+
+
+# ── Query Console ─────────────────────────────────────────────────────────────
+
+_ALLOWED_TABLES = {
+    'serviparamo_catalogo_skus',
+    'serviparamo_catalogo_embeddings',
+    'serviparamo_raw_categorias',
+    'serviparamo_raw_familias',
+    'serviparamo_raw_ordenes_encabezado',
+    'serviparamo_raw_ordenes_detalle',
+    'serviparamo_raw_pedidos_encabezado',
+    'serviparamo_raw_pedidos_detalle',
+    'serviparamo_raw_presupuesto_detalle',
+    'serviparamo_raw_presupuesto_resumen',
+    'serviparamo_raw_kardex',
+    'serviparamo_etl_log',
+}
+
+_ROW_LIMIT = 1000
+
+
+def _validate_query(sql: str) -> str | None:
+    """Retorna mensaje de error si la query no es permitida, None si es válida."""
+    stripped = sql.strip().lower()
+    if not stripped:
+        return 'La consulta está vacía.'
+    first_word = stripped.split()[0]
+    if first_word != 'select':
+        return 'Solo se permiten consultas SELECT.'
+    dangerous = re.compile(
+        r'\b(insert|update|delete|drop|truncate|alter|create|grant|revoke|exec|execute|copy|pg_)\b',
+        re.IGNORECASE,
+    )
+    if dangerous.search(sql):
+        return 'La consulta contiene operaciones no permitidas.'
+    return None
+
+
+@api_view(['POST'])
+def query_console(request):
+    """
+    Ejecuta una consulta SELECT contra la base de datos local (PostgreSQL).
+    Body: { "sql": "SELECT ..." }
+    Respuesta: { ok, columns, rows, row_count, elapsed_ms }
+    """
+    sql = (request.data.get('sql') or '').strip()
+    error = _validate_query(sql)
+    if error:
+        return _err(error)
+
+    # Inyectar LIMIT si no viene
+    if not re.search(r'\blimit\b', sql, re.IGNORECASE):
+        sql = f"{sql.rstrip(';')} LIMIT {_ROW_LIMIT}"
+
+    try:
+        t0 = time.monotonic()
+        with connection.cursor() as cur:
+            cur.execute(sql)
+            columns = [desc[0] for desc in cur.description] if cur.description else []
+            rows = [list(row) for row in cur.fetchall()]
+        elapsed_ms = round((time.monotonic() - t0) * 1000)
+
+        # Serializar tipos no-JSON
+        for row in rows:
+            for i, val in enumerate(row):
+                if hasattr(val, 'isoformat'):
+                    row[i] = val.isoformat()
+                elif val is None:
+                    row[i] = None
+                else:
+                    try:
+                        import json; json.dumps(val)
+                    except (TypeError, ValueError):
+                        row[i] = str(val)
+
+        return Response({
+            'ok': True,
+            'columns': columns,
+            'rows': rows,
+            'row_count': len(rows),
+            'elapsed_ms': elapsed_ms,
+        })
+    except Exception as e:
+        return _err(f'Error en la consulta: {e}')

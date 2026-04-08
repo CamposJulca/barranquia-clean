@@ -5,9 +5,9 @@ import {
   Search,
   Copy,
   Workflow,
-  ShoppingCart,
   BarChart3,
   Settings,
+  Terminal,
   ArrowLeft,
 } from "lucide-react";
 
@@ -18,6 +18,7 @@ const navigation = [
   { name: "Detección de Duplicados", href: "/duplicates", icon: Copy },
   { name: "Normalización", href: "/normalization", icon: Workflow },
   { name: "Analíticas", href: "/analytics", icon: BarChart3 },
+  { name: "Consola SQL", href: "/query", icon: Terminal },
   { name: "Configuración", href: "/settings", icon: Settings },
 ];
 

@@ -18,6 +18,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'rest_framework',
     'corsheaders',
+    'drf_spectacular',
     'joz',
 ]
 
@@ -91,5 +92,25 @@ REST_FRAMEWORK = {
     ],
     'DEFAULT_PERMISSION_CLASSES': [
         'rest_framework.permissions.AllowAny',
+    ],
+    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
+}
+
+SPECTACULAR_SETTINGS = {
+    'TITLE': 'Joz API',
+    'DESCRIPTION': (
+        'API de detección de anomalías financieras y gestión de alertas para Joyerías Joz.\n\n'
+        '**Fuente de datos:** API REST de SuperEfectivo\n\n'
+        '**Módulos:** Dashboard · Alertas · Riesgos · Historial de transacciones · ETL'
+    ),
+    'VERSION': '1.0.0',
+    'SERVE_INCLUDE_SCHEMA': False,
+    'COMPONENT_SPLIT_REQUEST': True,
+    'TAGS': [
+        {'name': 'Dashboard', 'description': 'Estadísticas generales del sistema'},
+        {'name': 'Alertas', 'description': 'Anomalías detectadas y gestión de estados'},
+        {'name': 'Riesgos', 'description': 'Riesgos operativos por almacén'},
+        {'name': 'Historial', 'description': 'Transacciones de SuperEfectivo'},
+        {'name': 'ETL', 'description': 'Pipeline de carga desde API SuperEfectivo'},
     ],
 }

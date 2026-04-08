@@ -2,88 +2,40 @@ import { useEffect, useState } from 'react'
 import { StatCard } from '../components/StatCard'
 import { RiskCard } from '../components/RiskCard'
 import { AnomalyChart } from '../components/AnomalyChart'
-import { AlertsTable, Alert } from '../components/AlertsTable'
 import { Card } from '../components/ui/card'
-import { Bell, TrendingUp, Activity, AlertTriangle } from 'lucide-react'
+import { ArrowDownCircle, ArrowUpCircle, Activity, DollarSign } from 'lucide-react'
 
-import { getStats, getAnomaliasPorDia, getAlertas, getRiesgos } from '../services/api'
+import { getStats, getAnomaliasPorDia, getRiesgos } from '../services/api'
 
 export default function Dashboard() {
   const [stats, setStats] = useState<any>(null)
   const [chartData, setChartData] = useState<any[]>([])
   const [stores, setStores] = useState<any[]>([])
-  const [alerts, setAlerts] = useState<Alert[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     async function fetchData() {
       try {
-        const resStats = await getStats()
-        const resChart = await getAnomaliasPorDia()
-        const resRiesgos = await getRiesgos()
-        const resAlerts = await getAlertas({ page_size: 5 })
+        const [resStats, resChart, resRiesgos] = await Promise.all([
+          getStats(),
+          getAnomaliasPorDia(),
+          getRiesgos(),
+        ])
 
-        console.log('STATS:', resStats.data)
-        console.log('CHART:', resChart.data)
-        console.log('RIESGOS:', resRiesgos.data)
-        console.log('ALERTS:', resAlerts.data)
+        const s    = resStats.data?.data   ?? resStats.data
+        const chart = resChart.data?.data  ?? resChart.data
+        const riesgos = resRiesgos.data?.data ?? resRiesgos.data
 
-        // --------------------
-        // STATS
-        // --------------------
-        setStats(resStats.data)
+        setStats(s)
+        setChartData(chart?.anomalias ?? [])
 
-        // --------------------
-        // CHART (FIX CLAVE)
-        // --------------------
-        const chartArray =
-          resChart.data?.anomalias ||
-          resChart.data?.results ||
-          resChart.data?.data ||
-          (Array.isArray(resChart.data) ? resChart.data : [])
-
-        const formattedChart = chartArray.map((item: any) => ({
-          date: item.date,
-          anomalies: item.anomalies
-        }))
-
-        setChartData(formattedChart)
-
-        // --------------------
-        // RIESGOS (TIENDAS)
-        // --------------------
-        const storesArray =
-          resRiesgos.data?.tiendas ||
-          resRiesgos.data?.results ||
-          []
-
-        const formattedStores = storesArray.slice(0, 6).map((t: any) => ({
+        const storesArr = riesgos?.tiendas ?? s?.tiendas ?? []
+        setStores(storesArr.slice(0, 6).map((t: any) => ({
           name: t.nombre,
           riskLevel: t.nivel_riesgo,
-          anomalyCount: t.anomalias_count
-        }))
-
-        setStores(formattedStores)
-
-        // --------------------
-        // ALERTAS
-        // --------------------
-        const alertsArray =
-          resAlerts.data?.results ||
-          resAlerts.data?.data ||
-          []
-
-        const formattedAlerts = alertsArray.map((a: any) => ({
-          id: a.id,
-          date: a.date,
-          store: a.store,
-          anomalyType: a.anomalyType,
-          amount: a.amount,
-          riskLevel: a.riskLevel,
-          status: a.estado
-        }))
-
-        setAlerts(formattedAlerts)
+          anomalyCount: t.anomalias_count,
+          montoTotal: t.monto_total,
+        })))
 
       } catch (error) {
         console.error('Error cargando dashboard:', error)
@@ -91,33 +43,66 @@ export default function Dashboard() {
         setLoading(false)
       }
     }
-
     fetchData()
   }, [])
 
-  if (loading) return <div>Cargando dashboard...</div>
+  const fmt = (n: number) =>
+    new Intl.NumberFormat('es-PA', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(n)
+
+  const fmtNum = (n: number) =>
+    new Intl.NumberFormat('es-PA').format(n)
+
+  if (loading) return (
+    <div className="flex items-center justify-center h-64">
+      <div className="text-gray-500">Cargando dashboard...</div>
+    </div>
+  )
 
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl">Dashboard</h1>
-        <p className="text-gray-500 mt-1">Resumen general del sistema de monitoreo</p>
+        <h1 className="text-3xl font-light">Dashboard</h1>
+        <p className="text-gray-500 mt-1">Monitoreo de transacciones SuperEfectivo</p>
       </div>
 
-      {/* Stats */}
+      {/* KPIs principales */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <StatCard title="Alertas Hoy" value={stats?.alertas_hoy || 0} icon={Bell} />
-        <StatCard title="Riesgo Alto" value={stats?.distribucion_riesgo?.alto || 0} icon={TrendingUp} />
-        <StatCard title="Transacciones" value={stats?.transacciones_analizadas || 0} icon={Activity} />
-        <StatCard title="Anomalías" value={stats?.anomalias_detectadas || 0} icon={AlertTriangle} />
+        <StatCard
+          title="Transacciones Totales"
+          value={fmtNum(stats?.total_transacciones ?? 0)}
+          icon={Activity}
+          iconColor="text-blue-600"
+          trend={{ value: `${fmtNum(stats?.transacciones_hoy ?? 0)} hoy`, isPositive: true }}
+        />
+        <StatCard
+          title="Volumen Total"
+          value={fmt(stats?.total_monto ?? 0)}
+          icon={DollarSign}
+          iconColor="text-green-600"
+          trend={{ value: `${fmt(stats?.monto_hoy ?? 0)} hoy`, isPositive: true }}
+        />
+        <StatCard
+          title="Aportes"
+          value={fmtNum(stats?.aportes_count ?? 0)}
+          icon={ArrowDownCircle}
+          iconColor="text-emerald-600"
+          trend={{ value: fmt(stats?.aportes_monto ?? 0), isPositive: true }}
+        />
+        <StatCard
+          title="Retiros"
+          value={fmtNum(stats?.retiros_count ?? 0)}
+          icon={ArrowUpCircle}
+          iconColor="text-orange-600"
+          trend={{ value: fmt(stats?.retiros_monto ?? 0), isPositive: false }}
+        />
       </div>
 
-      {/* Chart */}
+      {/* Gráfico de volumen diario */}
       <AnomalyChart data={chartData} />
 
-      {/* Riesgos */}
+      {/* Tiendas por volumen */}
       <div>
-        <h2 className="text-xl font-medium mb-4">Riesgo por Tienda</h2>
+        <h2 className="text-xl font-medium mb-4">Actividad por Almacén</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {stores.map((store) => (
             <RiskCard
@@ -130,13 +115,24 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Alertas */}
-      <div>
-        <h2 className="text-xl font-medium mb-4">Alertas Recientes</h2>
-        <Card>
-          <AlertsTable alerts={alerts} />
-        </Card>
-      </div>
+      {/* Resumen financiero */}
+      <Card className="p-6">
+        <h2 className="text-lg font-medium mb-4">Resumen Financiero (Últimos 7 días)</h2>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="text-center">
+            <p className="text-sm text-gray-500">Total Entradas</p>
+            <p className="text-2xl font-semibold text-emerald-600 mt-1">{fmt(stats?.total_entrada ?? 0)}</p>
+          </div>
+          <div className="text-center">
+            <p className="text-sm text-gray-500">Total Salidas</p>
+            <p className="text-2xl font-semibold text-red-600 mt-1">{fmt(stats?.total_salida ?? 0)}</p>
+          </div>
+          <div className="text-center">
+            <p className="text-sm text-gray-500">Volumen Bruto</p>
+            <p className="text-2xl font-semibold text-blue-600 mt-1">{fmt(stats?.total_monto ?? 0)}</p>
+          </div>
+        </div>
+      </Card>
     </div>
   )
 }
