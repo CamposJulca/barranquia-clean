@@ -29,4 +29,7 @@ urlpatterns = [
     path('aprobar/',             views.aprobar,         name='serviparamo-aprobar'),
     path('fusionar-familias/',   views.fusionar_familias, name='serviparamo-fusionar'),
     path('stats/',               views.stats,           name='serviparamo-stats'),
+
+    # Query Console
+    path('query/',               views.query_console,   name='serviparamo-query'),
 ]

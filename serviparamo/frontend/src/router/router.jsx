@@ -8,6 +8,7 @@ import Normalization from "../pages/Normalization";
 import PurchasesAnalytics from "../pages/PurchasesAnalytics";
 import SemanticSearch from "../pages/SemanticSearch";
 import Settings from "../pages/Settings";
+import QueryConsole from "../pages/QueryConsole";
 
 // basename="/serviparamo" permite que la SPA viva bajo /serviparamo/
 // cuando se sirve detrás del nginx reverse-proxy en Docker.
@@ -25,6 +26,7 @@ export const router = createBrowserRouter(
         { path: "analytics", element: <PurchasesAnalytics /> },
         { path: "search", element: <SemanticSearch /> },
         { path: "settings", element: <Settings /> },
+        { path: "query", element: <QueryConsole /> },
       ],
     },
   ],

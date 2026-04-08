@@ -18,6 +18,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'rest_framework',
     'corsheaders',
+    'drf_spectacular',
     'serviparamo',
 ]
 
@@ -91,5 +92,28 @@ REST_FRAMEWORK = {
     ],
     'DEFAULT_PERMISSION_CLASSES': [
         'rest_framework.permissions.AllowAny',
+    ],
+    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
+}
+
+SPECTACULAR_SETTINGS = {
+    'TITLE': 'ServiPáramo API',
+    'DESCRIPTION': (
+        'API de gestión de catálogo, normalización semántica y análisis de compras '
+        'para ServiPáramo y Cía S.C.A.\n\n'
+        '**Fuente de datos:** ERP SQL Server (ts1.serviparamo.com.co)\n\n'
+        '**Módulos:** SKUs · Familias · Categorías · Órdenes de compra · '
+        'Pedidos · Búsqueda semántica · Duplicados · ETL'
+    ),
+    'VERSION': '1.0.0',
+    'SERVE_INCLUDE_SCHEMA': False,
+    'COMPONENT_SPLIT_REQUEST': True,
+    'TAGS': [
+        {'name': 'SKUs', 'description': 'Catálogo de productos normalizados'},
+        {'name': 'Catálogo', 'description': 'Familias y categorías del ERP'},
+        {'name': 'Órdenes', 'description': 'Órdenes de compra'},
+        {'name': 'Pedidos', 'description': 'Solicitudes de pedido con presupuesto'},
+        {'name': 'Semántica', 'description': 'Búsqueda semántica y gestión de duplicados'},
+        {'name': 'ETL', 'description': 'Pipeline de carga desde SQL Server'},
     ],
 }

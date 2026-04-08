@@ -1,0 +1,489 @@
+{
+  "info": {
+    "name": "BarranquIA API",
+    "description": "Colección completa de endpoints para ServiPáramo y Joz.\n\n**Entornos disponibles:**\n- `barranquia-local.postman_environment.json` → desarrollo local\n\n**Variables de entorno usadas:**\n- `SERVIPARAMO_URL` → base URL backend ServiPáramo\n- `JOZ_URL` → base URL backend Joz\n\n**Swagger UI:**\n- ServiPáramo: `{{SERVIPARAMO_URL}}/api/serviparamo/docs/`\n- Joz: `{{JOZ_URL}}/api/joz/docs/`",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "ServiPáramo",
+      "description": "Gestión de catálogo, normalización semántica y análisis de compras.",
+      "item": [
+        {
+          "name": "Documentación",
+          "item": [
+            {
+              "name": "Swagger UI",
+              "request": {
+                "method": "GET",
+                "url": "{{SERVIPARAMO_URL}}/api/serviparamo/docs/",
+                "description": "Interfaz interactiva para explorar y probar todos los endpoints."
+              }
+            },
+            {
+              "name": "OpenAPI Schema (JSON)",
+              "request": {
+                "method": "GET",
+                "url": "{{SERVIPARAMO_URL}}/api/serviparamo/schema/",
+                "description": "Schema OpenAPI 3.0 descargable."
+              }
+            }
+          ]
+        },
+        {
+          "name": "Stats",
+          "item": [
+            {
+              "name": "Resumen del catálogo",
+              "request": {
+                "method": "GET",
+                "url": "{{SERVIPARAMO_URL}}/api/serviparamo/stats/",
+                "description": "Totales: SKUs, duplicados, aprobados, familias, embeddings, órdenes, pedidos."
+              }
+            }
+          ]
+        },
+        {
+          "name": "SKUs",
+          "item": [
+            {
+              "name": "Listar SKUs",
+              "request": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{SERVIPARAMO_URL}}/api/serviparamo/skus/",
+                  "host": ["{{SERVIPARAMO_URL}}"],
+                  "path": ["api", "serviparamo", "skus", ""],
+                  "query": [
+                    { "key": "page",      "value": "1",    "disabled": true },
+                    { "key": "page_size", "value": "50",   "disabled": true },
+                    { "key": "familia",   "value": "",     "disabled": true, "description": "Filtrar por familia normalizada" },
+                    { "key": "categoria", "value": "",     "disabled": true, "description": "Filtrar por categoría" },
+                    { "key": "q",         "value": "",     "disabled": true, "description": "Búsqueda libre (nombre, código)" }
+                  ]
+                },
+                "description": "Lista paginada de SKUs del catálogo. Soporta filtros por familia, categoría y búsqueda libre."
+              }
+            },
+            {
+              "name": "Detalle de un SKU",
+              "request": {
+                "method": "GET",
+                "url": "{{SERVIPARAMO_URL}}/api/serviparamo/skus/SKU-001/",
+                "description": "Detalle completo de un SKU por su código."
+              }
+            }
+          ]
+        },
+        {
+          "name": "Catálogo — Familias y Categorías",
+          "item": [
+            {
+              "name": "Familias normalizadas",
+              "request": {
+                "method": "GET",
+                "url": "{{SERVIPARAMO_URL}}/api/serviparamo/familias/",
+                "description": "Listado de familias normalizadas con total de ítems y duplicados por familia."
+              }
+            },
+            {
+              "name": "Familias ERP (raw)",
+              "request": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{SERVIPARAMO_URL}}/api/serviparamo/familias/erp/",
+                  "host": ["{{SERVIPARAMO_URL}}"],
+                  "path": ["api", "serviparamo", "familias", "erp", ""],
+                  "query": [
+                    { "key": "q", "value": "", "disabled": true }
+                  ]
+                },
+                "description": "Familias directas del ERP sin normalizar."
+              }
+            },
+            {
+              "name": "Categorías",
+              "request": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{SERVIPARAMO_URL}}/api/serviparamo/categorias/",
+                  "host": ["{{SERVIPARAMO_URL}}"],
+                  "path": ["api", "serviparamo", "categorias", ""],
+                  "query": [
+                    { "key": "q", "value": "", "disabled": true }
+                  ]
+                },
+                "description": "Categorías del ERP."
+              }
+            }
+          ]
+        },
+        {
+          "name": "Órdenes de Compra",
+          "item": [
+            {
+              "name": "Listar órdenes",
+              "request": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{SERVIPARAMO_URL}}/api/serviparamo/ordenes/",
+                  "host": ["{{SERVIPARAMO_URL}}"],
+                  "path": ["api", "serviparamo", "ordenes", ""],
+                  "query": [
+                    { "key": "page",       "value": "1",  "disabled": true },
+                    { "key": "page_size",  "value": "50", "disabled": true },
+                    { "key": "estado",     "value": "",   "disabled": true },
+                    { "key": "proveedor",  "value": "",   "disabled": true }
+                  ]
+                },
+                "description": "Lista paginada de órdenes de compra."
+              }
+            },
+            {
+              "name": "Detalle de orden",
+              "request": {
+                "method": "GET",
+                "url": "{{SERVIPARAMO_URL}}/api/serviparamo/ordenes/OC-001/",
+                "description": "Encabezado + ítems de una orden de compra por numfac."
+              }
+            }
+          ]
+        },
+        {
+          "name": "Pedidos",
+          "item": [
+            {
+              "name": "Listar pedidos",
+              "request": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{SERVIPARAMO_URL}}/api/serviparamo/pedidos/",
+                  "host": ["{{SERVIPARAMO_URL}}"],
+                  "path": ["api", "serviparamo", "pedidos", ""],
+                  "query": [
+                    { "key": "page",        "value": "1",  "disabled": true },
+                    { "key": "page_size",   "value": "50", "disabled": true },
+                    { "key": "estado",      "value": "",   "disabled": true },
+                    { "key": "solicitante", "value": "",   "disabled": true }
+                  ]
+                },
+                "description": "Lista paginada de solicitudes de pedido."
+              }
+            },
+            {
+              "name": "Detalle de pedido",
+              "request": {
+                "method": "GET",
+                "url": "{{SERVIPARAMO_URL}}/api/serviparamo/pedidos/5001/",
+                "description": "Encabezado + ítems + presupuesto de un pedido."
+              }
+            }
+          ]
+        },
+        {
+          "name": "Búsqueda Semántica",
+          "item": [
+            {
+              "name": "Buscar SKUs",
+              "request": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{SERVIPARAMO_URL}}/api/serviparamo/buscar/?q=tornillo&limit=20",
+                  "host": ["{{SERVIPARAMO_URL}}"],
+                  "path": ["api", "serviparamo", "buscar", ""],
+                  "query": [
+                    { "key": "q",     "value": "tornillo" },
+                    { "key": "limit", "value": "20" }
+                  ]
+                },
+                "description": "Búsqueda semántica por embeddings (sentence-transformers). Retorna similitud coseno."
+              }
+            },
+            {
+              "name": "Grupos de duplicados",
+              "request": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{SERVIPARAMO_URL}}/api/serviparamo/duplicados/",
+                  "host": ["{{SERVIPARAMO_URL}}"],
+                  "path": ["api", "serviparamo", "duplicados", ""],
+                  "query": [
+                    { "key": "familia",   "value": "",  "disabled": true },
+                    { "key": "page",      "value": "1", "disabled": true },
+                    { "key": "page_size", "value": "20","disabled": true }
+                  ]
+                },
+                "description": "Grupos de SKUs detectados como duplicados."
+              }
+            },
+            {
+              "name": "Aprobar normalización (por SKU)",
+              "request": {
+                "method": "POST",
+                "url": "{{SERVIPARAMO_URL}}/api/serviparamo/aprobar/",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"sku_id\": 1,\n  \"familia_normalizada\": \"Tornillería\"\n}"
+                },
+                "description": "Aprueba la normalización de un SKU individual."
+              }
+            },
+            {
+              "name": "Aprobar normalización (por grupo)",
+              "request": {
+                "method": "POST",
+                "url": "{{SERVIPARAMO_URL}}/api/serviparamo/aprobar/",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"grupo_id\": 5,\n  \"familia_normalizada\": \"Tornillería\"\n}"
+                },
+                "description": "Aprueba todos los SKUs de un grupo de duplicados a la vez."
+              }
+            },
+            {
+              "name": "Fusionar familias",
+              "request": {
+                "method": "POST",
+                "url": "{{SERVIPARAMO_URL}}/api/serviparamo/fusionar-familias/",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"familia_origen\": \"TORNILLOS\",\n  \"familia_destino\": \"Tornillería\"\n}"
+                },
+                "description": "Mueve todos los ítems de familia_origen a familia_destino."
+              }
+            }
+          ]
+        },
+        {
+          "name": "ETL",
+          "item": [
+            {
+              "name": "Estado del ETL",
+              "request": {
+                "method": "GET",
+                "url": "{{SERVIPARAMO_URL}}/api/serviparamo/etl/status/",
+                "description": "Última ejecución por tabla + estado de si está corriendo."
+              }
+            },
+            {
+              "name": "Ejecutar ETL (todas las tablas)",
+              "request": {
+                "method": "POST",
+                "url": "{{SERVIPARAMO_URL}}/api/serviparamo/etl/run/",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{}"
+                },
+                "description": "Dispara el ETL completo en background (SQL Server → PostgreSQL). Requiere acceso a la red del ERP."
+              }
+            },
+            {
+              "name": "Ejecutar ETL (tablas específicas)",
+              "request": {
+                "method": "POST",
+                "url": "{{SERVIPARAMO_URL}}/api/serviparamo/etl/run/",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"tablas\": [\"CatalogoSKU\", \"RawCategoria\"]\n}"
+                },
+                "description": "Ejecuta el ETL solo para las tablas indicadas."
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Joz",
+      "description": "Detección de anomalías financieras y gestión de alertas para Joyerías Joz.",
+      "item": [
+        {
+          "name": "Documentación",
+          "item": [
+            {
+              "name": "Swagger UI",
+              "request": {
+                "method": "GET",
+                "url": "{{JOZ_URL}}/api/joz/docs/",
+                "description": "Interfaz interactiva para explorar y probar todos los endpoints."
+              }
+            },
+            {
+              "name": "OpenAPI Schema (JSON)",
+              "request": {
+                "method": "GET",
+                "url": "{{JOZ_URL}}/api/joz/schema/",
+                "description": "Schema OpenAPI 3.0 descargable."
+              }
+            }
+          ]
+        },
+        {
+          "name": "Dashboard",
+          "item": [
+            {
+              "name": "Estadísticas generales",
+              "request": {
+                "method": "GET",
+                "url": "{{JOZ_URL}}/api/joz/stats/",
+                "description": "Resumen: alertas hoy, distribución de riesgos, transacciones, tiendas top."
+              }
+            },
+            {
+              "name": "Anomalías por día (últimos 30d)",
+              "request": {
+                "method": "GET",
+                "url": "{{JOZ_URL}}/api/joz/anomalias-por-dia/",
+                "description": "Serie temporal de anomalías agrupadas por día."
+              }
+            }
+          ]
+        },
+        {
+          "name": "Alertas",
+          "item": [
+            {
+              "name": "Listar alertas",
+              "request": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{JOZ_URL}}/api/joz/alertas/",
+                  "host": ["{{JOZ_URL}}"],
+                  "path": ["api", "joz", "alertas", ""],
+                  "query": [
+                    { "key": "page",        "value": "1",       "disabled": true },
+                    { "key": "page_size",   "value": "50",      "disabled": true },
+                    { "key": "severidad",   "value": "alta",    "disabled": true, "description": "baja | media | alta | critica" },
+                    { "key": "estado",      "value": "abierta", "disabled": true, "description": "abierta | en_revision | resuelta | descartada" },
+                    { "key": "nivel_riesgo","value": "high",    "disabled": true, "description": "low | medium | high" }
+                  ]
+                },
+                "description": "Lista paginada de alertas con filtros por severidad, estado y nivel de riesgo."
+              }
+            },
+            {
+              "name": "Cambiar estado de alerta",
+              "request": {
+                "method": "PATCH",
+                "url": "{{JOZ_URL}}/api/joz/alertas/1/",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"estado\": \"resuelta\"\n}",
+                  "options": { "raw": { "language": "json" } }
+                },
+                "description": "Actualiza el estado de una alerta. Valores válidos: abierta | en_revision | resuelta | descartada"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Riesgos",
+          "item": [
+            {
+              "name": "Listar riesgos y tiendas",
+              "request": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{JOZ_URL}}/api/joz/riesgos/",
+                  "host": ["{{JOZ_URL}}"],
+                  "path": ["api", "joz", "riesgos", ""],
+                  "query": [
+                    { "key": "nivel", "value": "alto", "disabled": true, "description": "bajo | medio | alto" }
+                  ]
+                },
+                "description": "Riesgos operativos + ranking de tiendas por volumen de transacciones."
+              }
+            }
+          ]
+        },
+        {
+          "name": "Historial de Transacciones",
+          "item": [
+            {
+              "name": "Listar transacciones",
+              "request": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{JOZ_URL}}/api/joz/historial/",
+                  "host": ["{{JOZ_URL}}"],
+                  "path": ["api", "joz", "historial", ""],
+                  "query": [
+                    { "key": "page",         "value": "1",          "disabled": true },
+                    { "key": "page_size",    "value": "50",         "disabled": true },
+                    { "key": "fecha_desde",  "value": "2026-01-01", "disabled": true },
+                    { "key": "fecha_hasta",  "value": "2026-04-06", "disabled": true },
+                    { "key": "tipo",         "value": "Aporte",     "disabled": true, "description": "Aporte | Retiro" },
+                    { "key": "almacen",      "value": "1",          "disabled": true, "description": "Código de almacén (1-30)" },
+                    { "key": "q",            "value": "",           "disabled": true, "description": "Búsqueda: cliente, referencia, identificación, descripción" }
+                  ]
+                },
+                "description": "Historial completo de movimientos de SuperEfectivo con filtros."
+              }
+            }
+          ]
+        },
+        {
+          "name": "ETL",
+          "item": [
+            {
+              "name": "Estado del ETL",
+              "request": {
+                "method": "GET",
+                "url": "{{JOZ_URL}}/api/joz/etl/status/",
+                "description": "Estado actual (corriendo/reposo) + últimas 10 ejecuciones."
+              }
+            },
+            {
+              "name": "Ejecutar ETL (ayer → hoy)",
+              "request": {
+                "method": "POST",
+                "url": "{{JOZ_URL}}/api/joz/etl/run/",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{}",
+                  "options": { "raw": { "language": "json" } }
+                },
+                "description": "ETL con rango por defecto: ayer → hoy, todos los almacenes."
+              }
+            },
+            {
+              "name": "Ejecutar ETL (rango personalizado)",
+              "request": {
+                "method": "POST",
+                "url": "{{JOZ_URL}}/api/joz/etl/run/",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"fecha_inicio\": \"2026-01-01\",\n  \"fecha_fin\":    \"2026-04-06\",\n  \"almacen\":      0\n}",
+                  "options": { "raw": { "language": "json" } }
+                },
+                "description": "ETL para un rango de fechas específico. almacen=0 carga todos los almacenes."
+              }
+            },
+            {
+              "name": "Ejecutar ETL (almacén específico)",
+              "request": {
+                "method": "POST",
+                "url": "{{JOZ_URL}}/api/joz/etl/run/",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"fecha_inicio\": \"2026-04-01\",\n  \"fecha_fin\":    \"2026-04-06\",\n  \"almacen\":      3\n}",
+                  "options": { "raw": { "language": "json" } }
+                },
+                "description": "ETL solo para el almacén 3."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
