@@ -73,7 +73,7 @@ def _row_to_dict(cursor, row) -> dict:
     return {k: _serialize(v) for k, v in zip(cols, row)}
 
 
-def _get_field(row: dict, *candidates, default=None):
+def _get_field(row: dict, *candidates, default=''):
     """Busca el primer campo que exista en el dict de la fila."""
     for name in candidates:
         if name in row and row[name] not in (None, ''):
@@ -120,12 +120,12 @@ def _log_etl(tabla: str, insertadas: int, errores: int,
 
 SKU_QUERY = """
 SELECT
-    LTRIM(RTRIM(ISNULL(codigo,    ''))) AS codigo,
-    LTRIM(RTRIM(ISNULL(familia,   ''))) AS familia,
-    LTRIM(RTRIM(ISNULL(categoria, ''))) AS categoria,
-    LTRIM(RTRIM(ISNULL(nombre,    ''))) AS nombre,
-    LTRIM(RTRIM(ISNULL(nombre1,   ''))) AS nombre1,
-    LTRIM(RTRIM(ISNULL(unidad,    ''))) AS unidad
+    LTRIM(RTRIM(ISNULL(codigo,    '')))           AS codigo,
+    LTRIM(RTRIM(ISNULL(familia,   '')))           AS familia,
+    LTRIM(RTRIM(ISNULL(categoria, '')))           AS categoria,
+    LEFT(LTRIM(RTRIM(ISNULL(nombre,  ''))), 500)  AS nombre,
+    LEFT(LTRIM(RTRIM(ISNULL(nombre1, ''))), 500)  AS nombre1,
+    LTRIM(RTRIM(ISNULL(unidad,    '')))           AS unidad
 FROM inv_ina01
 """
 
@@ -237,12 +237,22 @@ def _extract_and_load(cursor, erp_table: str, Model, field_map: dict,
                 kwargs = {'raw_data': row}
                 for model_field, candidates in field_map.items():
                     val = _get_field(row, *candidates)
-                    # Coerce types based on model field class
                     field_obj = Model._meta.get_field(model_field)
-                    if 'Date' in type(field_obj).__name__ and val is not None:
-                        val = _parse_date(val)
-                    elif 'Decimal' in type(field_obj).__name__ and val is not None:
-                        val = _parse_decimal(val)
+                    field_type = type(field_obj).__name__
+                    if 'Date' in field_type:
+                        val = _parse_date(val) if val not in (None, '') else None
+                    elif 'Decimal' in field_type:
+                        val = _parse_decimal(val) if val not in (None, '') else None
+                    elif 'Integer' in field_type:
+                        try:
+                            val = int(val) if val not in (None, '') else None
+                        except (ValueError, TypeError):
+                            val = None
+                    elif 'Char' in field_type or 'Text' in field_type:
+                        val = str(val).strip() if val not in (None, '') else ''
+                        max_len = getattr(field_obj, 'max_length', None)
+                        if max_len and len(val) > max_len:
+                            val = val[:max_len]
                     kwargs[model_field] = val
                 batch.append(Model(**kwargs))
 
@@ -267,101 +277,110 @@ def _extract_and_load(cursor, erp_table: str, Model, field_map: dict,
 # (el primero que exista y no sea None se usa)
 
 FIELD_MAPS = {
+    # inv_ina01_categoria cols: codigo, categoria, usuario, familia, aval_compras, fechagr, fecham, id
     'RawCategoria': {
         'erp_table': 'inv_ina01_categoria',
         'model': RawCategoria,
         'truncate': True,
         'fields': {
-            'categoria_id': ['categoria', 'id_categoria', 'cod_categoria', 'codigo'],
-            'nombre': ['nombre', 'descripcion', 'desc_categoria'],
+            'categoria_id': ['codigo', 'categoria', 'id'],
+            'nombre': ['categoria', 'nombre', 'descripcion'],
         },
     },
+    # inv_ina01_familia cols: familia, Row_ID, usuario, fechagr, fecham, id
     'RawFamilia': {
         'erp_table': 'inv_ina01_familia',
         'model': RawFamilia,
         'truncate': True,
         'fields': {
-            'familia_id': ['familia', 'id_familia', 'cod_familia', 'codigo'],
-            'nombre': ['nombre', 'descripcion', 'desc_familia'],
+            'familia_id': ['familia', 'row_id', 'id'],
+            'nombre': ['familia', 'nombre', 'descripcion'],
         },
     },
+    # com_orden01 cols: numfac, nitced, fch_fac, estado, ...
     'RawOrdenEncabezado': {
         'erp_table': 'com_orden01',
         'model': RawOrdenEncabezado,
         'truncate': True,
         'fields': {
-            'numfac': ['numfac', 'num_oc', 'numero', 'nro_oc'],
-            'proveedor_id': ['proveedor', 'id_proveedor', 'cod_proveedor', 'nit'],
-            'fecha_oc': ['fecha', 'fecha_oc', 'fecha_orden'],
-            'estado': ['estado', 'estado_oc', 'status'],
+            'numfac': ['numfac', 'num_oc', 'numero'],
+            'proveedor_id': ['nitced', 'nitced2', 'proveedor', 'nit'],
+            'fecha_oc': ['fch_fac', 'fch_pro', 'fechagr'],
+            'estado': ['estado', 'status'],
         },
     },
+    # com_orden02 cols: numfac, codigo, nombre, cntdad, valor, ...
     'RawOrdenDetalle': {
         'erp_table': 'com_orden02',
         'model': RawOrdenDetalle,
         'truncate': True,
         'fields': {
-            'numfac': ['numfac', 'num_oc', 'numero'],
-            'codigo_item': ['codigo', 'cod_item', 'item', 'referencia'],
-            'descripcion': ['descripcion', 'nombre', 'descrip', 'desc_item'],
-            'cantidad': ['cantidad', 'cant', 'qty'],
-            'precio_unitario': ['precio', 'precio_unitario', 'vlr_unitario', 'valor_unitario'],
+            'numfac': ['numfac', 'numero'],
+            'codigo_item': ['codigo', 'cod_item'],
+            'descripcion': ['nombre', 'descrip', 'descripcion'],
+            'cantidad': ['cntdad', 'cantidad', 'cant'],
+            'precio_unitario': ['valor', 'precio', 'vlr_unitario'],
         },
     },
+    # com_peda01 cols: pedido, vendedor, fch_fac, estado, usuario, ...
     'RawPedidoEncabezado': {
         'erp_table': 'com_peda01',
         'model': RawPedidoEncabezado,
         'truncate': True,
         'fields': {
-            'pedido': ['pedido', 'num_pedido', 'id_pedido'],
-            'solicitante': ['solicitante', 'usuario', 'quien_pide', 'empleado'],
-            'fecha_pedido': ['fecha', 'fecha_pedido', 'fecha_solicitud'],
-            'estado': ['estado', 'status', 'estado_pedido'],
+            'pedido': ['pedido', 'num_pedido'],
+            'solicitante': ['vendedor', 'vendedor1', 'usuario', 'supervisor'],
+            'fecha_pedido': ['fch_fac', 'fch_rad', 'fechagr'],
+            'estado': ['estado', 'cierre_estado', 'status'],
         },
     },
+    # com_peda02 cols: pedido, codigo, nombre, cntdad, valor, ...
     'RawPedidoDetalle': {
         'erp_table': 'com_peda02',
         'model': RawPedidoDetalle,
         'truncate': True,
         'fields': {
             'pedido': ['pedido', 'num_pedido'],
-            'codigo_item': ['codigo', 'cod_item', 'item'],
-            'descripcion': ['descripcion', 'nombre', 'descrip'],
-            'cantidad': ['cantidad', 'cant', 'qty'],
+            'codigo_item': ['codigo', 'cod_item'],
+            'descripcion': ['nombre', 'descrip', 'descripcion'],
+            'cantidad': ['cntdad', 'cantidad', 'cant'],
         },
     },
+    # com_peda03 cols: pedido, item, descrip, cant, cospro, ...
     'RawPresupuestoDetalle': {
         'erp_table': 'com_peda03',
         'model': RawPresupuestoDetalle,
         'truncate': True,
         'fields': {
             'pedido': ['pedido', 'num_pedido'],
-            'codigo_item': ['codigo', 'cod_item', 'item'],
-            'descripcion': ['descripcion', 'nombre', 'descrip'],
-            'cantidad': ['cantidad', 'cant'],
-            'precio': ['precio', 'valor', 'vlr', 'precio_unitario'],
+            'codigo_item': ['item', 'codigo', 'cod_item'],
+            'descripcion': ['descrip', 'nombre', 'descripcion'],
+            'cantidad': ['cant', 'cntdad', 'cantidad'],
+            'precio': ['cospro', 'cosrep_actual', 'valor', 'precio'],
         },
     },
+    # com_peda03_mat cols: agencia, pedido, numfac, codigo, cantidad, total, ...
     'RawPresupuestoResumen': {
         'erp_table': 'com_peda03_mat',
         'model': RawPresupuestoResumen,
         'truncate': True,
         'fields': {
             'pedido': ['pedido', 'num_pedido'],
-            'familia': ['familia', 'categoria', 'grupo'],
-            'total': ['total', 'valor_total', 'monto', 'vlr_total'],
+            'familia': ['codigo', 'familia', 'numfac'],
+            'total': ['total', 'valor_total', 'monto'],
         },
     },
+    # inv_ina02 cols: numfac, nomsis, codigo, cntent, fecha, ...
     'RawKardex': {
         'erp_table': 'inv_ina02',
         'model': RawKardex,
         'truncate': True,
         'fields': {
-            'numfac': ['numfac', 'numero', 'num_doc'],
-            'nomsis': ['nomsis', 'tipo_mov', 'sistema', 'origen'],
-            'codigo_item': ['codigo', 'cod_item', 'item'],
-            'cantidad': ['cantidad', 'cant'],
-            'fecha_mov': ['fecha', 'fecha_mov', 'fecha_movimiento'],
+            'numfac': ['numfac', 'docume', 'numero'],
+            'nomsis': ['nomsis', 'tipodo', 'tipo_mov'],
+            'codigo_item': ['codigo', 'cod_item'],
+            'cantidad': ['cntent', 'cntped', 'cntdad', 'cantidad'],
+            'fecha_mov': ['fecha', 'fecha_mov', 'fechagr'],
         },
     },
 }

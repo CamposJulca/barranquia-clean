@@ -57,7 +57,7 @@ services:
       DB_USER: ${SERVIPARAMO_DB_USER:-serviparamo}
       DB_PASSWORD: ${SERVIPARAMO_DB_PASSWORD:-serviparamo2024}
       SECRET_KEY: ${SERVIPARAMO_SECRET_KEY:-fallback-insecure-key}
-      SERVIPARAMO_ERP_PASS: ${SERVIPARAMO_ERP_PASS:-}
+      SERVIPARAMO_ERP_PASS: ${SERVIPARAMO_ERP_PASS:-JspTa2i4axlm60}
     depends_on:
       postgres:
         condition: service_healthy
@@ -134,6 +134,10 @@ services:
       DB_USER: ${JOZ_DB_USER:-joz}
       DB_PASSWORD: ${JOZ_DB_PASSWORD:-joz2024}
       SECRET_KEY: ${JOZ_SECRET_KEY:-fallback-insecure-key}
+      JOZ_API_URL: ${JOZ_API_URL:-https://ia.elpenon.pa}
+      JOZ_API_USUARIO: ${JOZ_API_USUARIO:-SuperEfectivo}
+      JOZ_API_PASSWORD: ${JOZ_API_PASSWORD:-se7648}
+      JOZ_API_TOKEN: ${JOZ_API_TOKEN:-7fA9Kx2QmL8zR4p}
     depends_on:
       postgres:
         condition: service_healthy
@@ -148,7 +152,7 @@ services:
       context: ..
       dockerfile: joz/infra/Dockerfile.frontend
       args:
-        VITE_API_URL: ""
+        VITE_API_URL: "/api/joz"
         VITE_API_TIMEOUT: "15000"
     container_name: barranquia_joz_frontend
     restart: unless-stopped
