@@ -51,11 +51,9 @@ TIMEOUT_SEG  = 30
 
 def _swacceso():
     return {
-        'pSWacceso': {
-            'pUsuario':  API_USUARIO,
-            'pPassword': API_PASSWORD,
-            'pToken':    API_TOKEN,
-        }
+        'usuario':  API_USUARIO,
+        'password': API_PASSWORD,
+        'token':    API_TOKEN,
     }
 
 

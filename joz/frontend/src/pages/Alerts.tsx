@@ -27,7 +27,8 @@ export default function Alerts() {
 
       const res = await getAlertas(params)
 
-      const formatted = res.data.results.map((a: any) => ({
+      const results = res.data?.data?.results ?? res.data?.results ?? []
+      const formatted = results.map((a: any) => ({
         id: a.id,
         date: a.date,
         store: a.store,

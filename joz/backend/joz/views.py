@@ -86,43 +86,79 @@ def stats(request):
         for t in tiendas_qs
     ]
 
+    # Agregados reales de transacciones
+    agg_total = Transaccion.objects.aggregate(
+        total_entrada=Sum('entrada'),
+        total_salida=Sum('salida'),
+        total_monto=Sum('monto'),
+    )
+    agg_hoy = Transaccion.objects.filter(fecha=hoy).aggregate(
+        txns_hoy=Count('id'),
+        monto_hoy=Sum('monto'),
+    )
+    aportes_count  = Transaccion.objects.filter(tipo='Aporte').count()
+    retiros_count  = Transaccion.objects.filter(tipo='Retiro').count()
+    aportes_monto  = Transaccion.objects.filter(tipo='Aporte').aggregate(v=Sum('entrada'))['v'] or 0
+    retiros_monto  = Transaccion.objects.filter(tipo='Retiro').aggregate(v=Sum('salida'))['v'] or 0
+
     return Response(_ok({
-        # Campos que usa el Dashboard
-        'alertas_hoy':            Alerta.objects.filter(generado_en__date=hoy).count(),
-        'distribucion_riesgo':    dist,
+        # KPIs principales (datos reales)
+        'total_transacciones':      Transaccion.objects.count(),
         'transacciones_analizadas': Transaccion.objects.count(),
-        'anomalias_detectadas':   Alerta.objects.count(),
-        # Campos adicionales para Risks.tsx
+        'transacciones_hoy':        agg_hoy['txns_hoy'] or 0,
+        'monto_hoy':                float(agg_hoy['monto_hoy'] or 0),
+        'total_entrada':            float(agg_total['total_entrada'] or 0),
+        'total_salida':             float(agg_total['total_salida'] or 0),
+        'total_monto':              float(agg_total['total_monto'] or 0),
+        'aportes_count':            aportes_count,
+        'retiros_count':            retiros_count,
+        'aportes_monto':            float(aportes_monto),
+        'retiros_monto':            float(retiros_monto),
+        # Alertas / anomalías
+        'alertas_hoy':              Alerta.objects.filter(generado_en__date=hoy).count(),
+        'alertas_abiertas':         Alerta.objects.filter(estado='abierta').count(),
+        'alertas_criticas':         Alerta.objects.filter(severidad='critica', estado='abierta').count(),
+        'anomalias_detectadas':     Alerta.objects.count(),
+        'distribucion_riesgo':      dist,
+        'riesgos_altos':            dist['alto'],
+        # Tiendas
         'tiendas':  tiendas,
         'top5':     tiendas[:5],
-        # Compatibilidad con versiones anteriores
-        'total_transacciones':  Transaccion.objects.count(),
-        'alertas_abiertas':     Alerta.objects.filter(estado='abierta').count(),
-        'alertas_criticas':     Alerta.objects.filter(severidad='critica', estado='abierta').count(),
-        'riesgos_altos':        dist['alto'],
-        'transacciones_30d':    Transaccion.objects.filter(fecha__gte=hace_30_dias).count(),
+        'transacciones_30d': Transaccion.objects.filter(fecha__gte=hace_30_dias).count(),
     }))
 
 
 @api_view(['GET'])
 def anomalias_por_dia(request):
     """
-    Anomalías agrupadas por día (últimos 30 días).
-    Formato: { anomalias: [{ date, anomalies }] }
+    Volumen de transacciones agrupado por día (últimos N días).
+    Formato: { anomalias: [{ date, anomalies, aportes, retiros, monto }] }
     """
-    hace_30_dias = timezone.now().date() - timedelta(days=30)
+    dias = min(int(request.GET.get('dias', 7)), 30)
+    desde = timezone.now().date() - timedelta(days=dias - 1)
+
     qs = (
-        Alerta.objects
-        .filter(generado_en__date__gte=hace_30_dias)
-        .extra(select={'dia': "DATE(generado_en)"})
-        .values('dia')
-        .annotate(total=Count('id'))
-        .order_by('dia')
+        Transaccion.objects
+        .filter(fecha__gte=desde)
+        .values('fecha', 'tipo')
+        .annotate(total=Count('id'), monto=Sum('monto'))
+        .order_by('fecha')
     )
-    anomalias = [
-        {'date': str(row['dia']), 'anomalies': row['total']}
-        for row in qs
-    ]
+
+    # Agrupar por fecha
+    por_fecha: dict = {}
+    for row in qs:
+        d = str(row['fecha'])
+        if d not in por_fecha:
+            por_fecha[d] = {'date': d, 'anomalies': 0, 'aportes': 0, 'retiros': 0, 'monto': 0}
+        por_fecha[d]['anomalies'] += row['total']
+        por_fecha[d]['monto'] += float(row['monto'] or 0)
+        if row['tipo'] == 'Aporte':
+            por_fecha[d]['aportes'] = row['total']
+        elif row['tipo'] == 'Retiro':
+            por_fecha[d]['retiros'] = row['total']
+
+    anomalias = sorted(por_fecha.values(), key=lambda x: x['date'])
     return Response(_ok({'anomalias': anomalias}))
 
 

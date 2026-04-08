@@ -2,11 +2,9 @@ import { Card } from '../components/ui/card';
 import { Badge } from '../components/ui/badge';
 import { Input } from '../components/ui/input';
 import { Button } from '../components/ui/button';
-import { Calendar, Download } from 'lucide-react';
+import { Download, Search } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { getHistorial } from '../services/api';
-
-type ResultadoType = 'false_positive' | 'confirmed' | 'investigating';
 
 interface HistoryRecord {
   id: number;
@@ -14,120 +12,132 @@ interface HistoryRecord {
   store: string;
   anomalyType: string;
   amount: number;
-  resultado: ResultadoType; // aquí usamos el tipo exacto
+  entrada: number;
+  salida: number;
   estado: string;
   analista: string;
+  referencia: string;
+  cliente: string;
+  numero_identificacion: string;
+  descripcion: string;
 }
 
-const statusColors: Record<ResultadoType, string> = {
-  false_positive: 'bg-gray-100 text-gray-800 border-gray-200',
-  confirmed: 'bg-red-100 text-red-800 border-red-200',
-  investigating: 'bg-blue-100 text-blue-800 border-blue-200',
+const tipoColors: Record<string, string> = {
+  Aporte:  'bg-emerald-100 text-emerald-800 border-emerald-200',
+  Retiro:  'bg-orange-100 text-orange-800 border-orange-200',
 };
 
-const statusLabels: Record<ResultadoType, string> = {
-  false_positive: 'Falso Positivo',
-  confirmed: 'Confirmado',
-  investigating: 'Investigando',
-};
+const fmt = (n: number) =>
+  new Intl.NumberFormat('es-PA', { style: 'currency', currency: 'USD' }).format(n);
 
 export default function History() {
   const [historyData, setHistoryData] = useState<HistoryRecord[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
+  const [total, setTotal] = useState(0);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    async function fetchData() {
-      try {
-        const response = await getHistorial({ page: 1, page_size: 20 });
-        const data: HistoryRecord[] = response.data.results.map((item: any) => ({
-          ...item,
-          amount: Number(item.amount),
-          resultado: item.resultado as ResultadoType, // casteamos al tipo correcto
-        }));
-        setHistoryData(data);
-      } catch (error) {
-        console.error('Error al cargar historial', error);
-      }
+    const timer = setTimeout(() => fetchData(), 300);
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
+
+  async function fetchData() {
+    setLoading(true);
+    try {
+      const response = await getHistorial({ page: 1, page_size: 50, q: searchTerm || undefined });
+      const payload  = response.data?.data ?? response.data ?? {};
+      const results  = payload.results ?? [];
+      setTotal(response.data?.count ?? payload.count ?? results.length);
+      setHistoryData(results.map((item: any) => ({
+        ...item,
+        amount:  Number(item.amount),
+        entrada: Number(item.entrada ?? 0),
+        salida:  Number(item.salida  ?? 0),
+      })));
+    } catch (error) {
+      console.error('Error al cargar historial', error);
+    } finally {
+      setLoading(false);
     }
-
-    fetchData();
-  }, []);
-
-  const filteredHistory = historyData.filter(record =>
-    record.store.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    record.anomalyType.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    record.id.toString().includes(searchTerm)
-  );
+  }
 
   return (
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl">Historial</h1>
-          <p className="text-gray-500 mt-1">Historial completo de anomalías detectadas</p>
+          <h1 className="text-3xl font-light">Historial</h1>
+          <p className="text-gray-500 mt-1">Transacciones SuperEfectivo</p>
         </div>
-        <Button>
+        <Button variant="outline">
           <Download className="w-4 h-4 mr-2" />
           Exportar
         </Button>
       </div>
 
-      {/* Filters */}
-      <Card className="p-6">
-        <div className="flex items-center gap-4">
-          <Calendar className="w-5 h-5 text-gray-500" />
+      {/* Búsqueda */}
+      <Card className="p-4">
+        <div className="flex items-center gap-3">
+          <Search className="w-4 h-4 text-gray-400" />
           <Input
-            type="text"
-            placeholder="Buscar en historial..."
+            placeholder="Buscar por cliente, referencia, cédula..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="flex-1"
+            className="flex-1 border-0 shadow-none focus-visible:ring-0 p-0"
           />
-          <Button variant="outline">Filtrar por fecha</Button>
         </div>
       </Card>
 
-      {/* History Table */}
+      {/* Tabla */}
       <Card>
-        <div className="p-6 border-b border-gray-200">
-          <p className="text-sm text-gray-600">
-            Mostrando {filteredHistory.length} de {historyData.length} registros
+        <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+          <p className="text-sm text-gray-500">
+            {loading ? 'Cargando...' : `${historyData.length} de ${total.toLocaleString()} registros`}
           </p>
         </div>
         <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-gray-50 border-b border-gray-200">
+          <table className="w-full text-sm">
+            <thead className="bg-gray-50 border-b border-gray-100">
               <tr>
-                <th className="text-left px-4 py-3 text-sm text-gray-600">ID</th>
-                <th className="text-left px-4 py-3 text-sm text-gray-600">Fecha y Hora</th>
-                <th className="text-left px-4 py-3 text-sm text-gray-600">Tienda</th>
-                <th className="text-left px-4 py-3 text-sm text-gray-600">Tipo de Anomalía</th>
-                <th className="text-left px-4 py-3 text-sm text-gray-600">Monto</th>
-                <th className="text-left px-4 py-3 text-sm text-gray-600">Resultado</th>
-                <th className="text-left px-4 py-3 text-sm text-gray-600">Estado</th>
-                <th className="text-left px-4 py-3 text-sm text-gray-600">Analista</th>
+                <th className="text-left px-4 py-3 text-gray-500 font-medium">Referencia</th>
+                <th className="text-left px-4 py-3 text-gray-500 font-medium">Fecha</th>
+                <th className="text-left px-4 py-3 text-gray-500 font-medium">Almacén</th>
+                <th className="text-left px-4 py-3 text-gray-500 font-medium">Cliente</th>
+                <th className="text-left px-4 py-3 text-gray-500 font-medium">Tipo</th>
+                <th className="text-right px-4 py-3 text-gray-500 font-medium">Entrada</th>
+                <th className="text-right px-4 py-3 text-gray-500 font-medium">Salida</th>
+                <th className="text-left px-4 py-3 text-gray-500 font-medium">Cajero</th>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {filteredHistory.map((record) => (
-                <tr key={record.id} className="hover:bg-gray-50">
-                  <td className="px-4 py-3 text-sm font-medium">{record.id}</td>
-                  <td className="px-4 py-3 text-sm text-gray-600">{new Date(record.date).toLocaleString()}</td>
-                  <td className="px-4 py-3 text-sm">{record.store}</td>
-                  <td className="px-4 py-3 text-sm">{record.anomalyType}</td>
-                  <td className="px-4 py-3 text-sm">${record.amount.toLocaleString()}</td>
-                  <td className="px-4 py-3 text-sm">
-                    <Badge variant="outline" className={statusColors[record.resultado]}>
-                      {statusLabels[record.resultado]}
+            <tbody className="divide-y divide-gray-50">
+              {historyData.map((record) => (
+                <tr key={record.id} className="hover:bg-gray-50 transition-colors" title={record.descripcion}>
+                  <td className="px-4 py-3 font-mono text-xs text-gray-600">{record.referencia}</td>
+                  <td className="px-4 py-3 text-gray-600 whitespace-nowrap">{record.date}</td>
+                  <td className="px-4 py-3">{record.store}</td>
+                  <td className="px-4 py-3">
+                    <div className="font-medium">{record.cliente}</div>
+                    <div className="text-xs text-gray-400">{record.numero_identificacion}</div>
+                  </td>
+                  <td className="px-4 py-3">
+                    <Badge variant="outline" className={tipoColors[record.anomalyType] ?? 'bg-gray-100 text-gray-700'}>
+                      {record.anomalyType}
                     </Badge>
                   </td>
-                  <td className="px-4 py-3 text-sm">{record.estado}</td>
-                  <td className="px-4 py-3 text-sm">{record.analista}</td>
+                  <td className="px-4 py-3 text-right text-emerald-700 font-medium">
+                    {record.entrada > 0 ? fmt(record.entrada) : '—'}
+                  </td>
+                  <td className="px-4 py-3 text-right text-orange-700 font-medium">
+                    {record.salida > 0 ? fmt(record.salida) : '—'}
+                  </td>
+                  <td className="px-4 py-3 text-gray-500 text-xs">{record.analista}</td>
                 </tr>
               ))}
             </tbody>
           </table>
+          {!loading && historyData.length === 0 && (
+            <div className="text-center py-12 text-gray-400">Sin resultados</div>
+          )}
         </div>
       </Card>
     </div>
