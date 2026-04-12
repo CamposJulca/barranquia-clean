@@ -1,41 +1,137 @@
 import { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
+
 import { StatCard } from '../components/StatCard'
-import { RiskCard } from '../components/RiskCard'
 import { AnomalyChart } from '../components/AnomalyChart'
 import { Card } from '../components/ui/card'
-import { ArrowDownCircle, ArrowUpCircle, Activity, DollarSign } from 'lucide-react'
 
-import { getStats, getAnomaliasPorDia, getRiesgos } from '../services/api'
+import {
+  Activity,
+  DollarSign,
+  ArrowDownCircle,
+  ArrowUpCircle,
+} from 'lucide-react'
+
+import { getStats, getAnomaliasPorDia, getHistorial } from '../services/api'
+
+type TipoOperacion =
+  | 'Empeño'
+  | 'Retiro de empeño'
+  | 'Abono / Interés'
+  | 'Apertura de caja'
+  | 'Cierre de caja'
+  | 'Otro'
+
+interface TipoData {
+  count: number
+  monto: number
+}
+
+interface StoreCalculado {
+  nombre: string
+  total: number
+  cantidad: number
+}
 
 export default function Dashboard() {
   const [stats, setStats] = useState<any>(null)
   const [chartData, setChartData] = useState<any[]>([])
-  const [stores, setStores] = useState<any[]>([])
+  const [storesCalculados, setStoresCalculados] = useState<StoreCalculado[]>([])
+  const [tiposGlobales, setTiposGlobales] = useState<Record<TipoOperacion, TipoData>>({
+    'Empeño': { count: 0, monto: 0 },
+    'Retiro de empeño': { count: 0, monto: 0 },
+    'Abono / Interés': { count: 0, monto: 0 },
+    'Apertura de caja': { count: 0, monto: 0 },
+    'Cierre de caja': { count: 0, monto: 0 },
+    'Otro': { count: 0, monto: 0 },
+  })
   const [loading, setLoading] = useState(true)
+
+  const navigate = useNavigate()
 
   useEffect(() => {
     async function fetchData() {
       try {
-        const [resStats, resChart, resRiesgos] = await Promise.all([
+        const [statsRaw, chartRaw, historialRaw] = await Promise.all([
           getStats(),
           getAnomaliasPorDia(),
-          getRiesgos(),
+          getHistorial({ page_size: 500 }),
         ])
 
-        const s    = resStats.data?.data   ?? resStats.data
-        const chart = resChart.data?.data  ?? resChart.data
-        const riesgos = resRiesgos.data?.data ?? resRiesgos.data
+        const statsData = statsRaw?.data ?? statsRaw
+        setStats(statsData)
 
-        setStats(s)
-        setChartData(chart?.anomalias ?? [])
+        const rows = historialRaw?.results ?? []
 
-        const storesArr = riesgos?.tiendas ?? s?.tiendas ?? []
-        setStores(storesArr.slice(0, 6).map((t: any) => ({
-          name: t.nombre,
-          riskLevel: t.nivel_riesgo,
-          anomalyCount: t.anomalias_count,
-          montoTotal: t.monto_total,
-        })))
+        const chartDataFromHistorial = rows.reduce((acc: any, r: any) => {
+  const date = r.date
+
+  if (!acc[date]) {
+    acc[date] = {
+      date,          // 🔥 clave correcta
+      aportes: 0,
+      retiros: 0
+    }
+  }
+
+  acc[date].aportes += Number(r.entrada || 0)
+  acc[date].retiros += Number(r.salida || 0)
+
+  return acc
+}, {})
+
+const chartArray = Object.values(chartDataFromHistorial).sort(
+  (a: any, b: any) =>
+    new Date(a.date).getTime() - new Date(b.date).getTime()
+)
+
+setChartData(chartArray)
+
+        const categorizar = (r: any): TipoOperacion => {
+          const desc = r.descripcion?.toLowerCase() ?? ''
+
+          if (desc.startsWith('empeño')) return 'Empeño'
+          if (desc.startsWith('retira')) return 'Retiro de empeño'
+          if (desc.startsWith('abona') || desc.startsWith('paga')) return 'Abono / Interés'
+          if (desc.startsWith('apertura')) return 'Apertura de caja'
+          if (desc.startsWith('cierre')) return 'Cierre de caja'
+
+          return 'Otro'
+        }
+
+        const mapa: Record<string, StoreCalculado> = {}
+
+        const tipos: Record<TipoOperacion, TipoData> = {
+          'Empeño': { count: 0, monto: 0 },
+          'Retiro de empeño': { count: 0, monto: 0 },
+          'Abono / Interés': { count: 0, monto: 0 },
+          'Apertura de caja': { count: 0, monto: 0 },
+          'Cierre de caja': { count: 0, monto: 0 },
+          'Otro': { count: 0, monto: 0 },
+        }
+
+        rows.forEach((r: any) => {
+          const store = r.store
+          const categoria = categorizar(r)
+          const monto = Number(r.entrada || 0) + Number(r.salida || 0)
+
+          if (!mapa[store]) {
+            mapa[store] = {
+              nombre: store,
+              total: 0,
+              cantidad: 0,
+            }
+          }
+
+          mapa[store].total += monto
+          mapa[store].cantidad += 1
+
+          tipos[categoria].count++
+          tipos[categoria].monto += monto
+        })
+
+        setStoresCalculados(Object.values(mapa))
+        setTiposGlobales(tipos)
 
       } catch (error) {
         console.error('Error cargando dashboard:', error)
@@ -43,96 +139,75 @@ export default function Dashboard() {
         setLoading(false)
       }
     }
+
     fetchData()
   }, [])
 
   const fmt = (n: number) =>
-    new Intl.NumberFormat('es-PA', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(n)
+    new Intl.NumberFormat('es-CO', {
+      style: 'currency',
+      currency: 'COP',
+    }).format(n)
 
   const fmtNum = (n: number) =>
-    new Intl.NumberFormat('es-PA').format(n)
+    new Intl.NumberFormat('es-CO').format(n)
 
-  if (loading) return (
-    <div className="flex items-center justify-center h-64">
-      <div className="text-gray-500">Cargando dashboard...</div>
-    </div>
-  )
+  if (loading) return <div>Cargando...</div>
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-light">Dashboard</h1>
-        <p className="text-gray-500 mt-1">Monitoreo de transacciones SuperEfectivo</p>
+
+      <h1 className="text-3xl">Dashboard</h1>
+
+      {/* KPIs */}
+      <div className="grid grid-cols-4 gap-6">
+        <StatCard title="Transacciones" value={fmtNum(stats?.total_transacciones)} icon={Activity} />
+        <StatCard title="Volumen Total" value={fmt(stats?.total_monto)} icon={DollarSign} />
+        <StatCard title="Aportes" value={fmtNum(stats?.aportes_count)} icon={ArrowDownCircle} />
+        <StatCard title="Retiros" value={fmtNum(stats?.retiros_count)} icon={ArrowUpCircle} />
       </div>
 
-      {/* KPIs principales */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <StatCard
-          title="Transacciones Totales"
-          value={fmtNum(stats?.total_transacciones ?? 0)}
-          icon={Activity}
-          iconColor="text-blue-600"
-          trend={{ value: `${fmtNum(stats?.transacciones_hoy ?? 0)} hoy`, isPositive: true }}
-        />
-        <StatCard
-          title="Volumen Total"
-          value={fmt(stats?.total_monto ?? 0)}
-          icon={DollarSign}
-          iconColor="text-green-600"
-          trend={{ value: `${fmt(stats?.monto_hoy ?? 0)} hoy`, isPositive: true }}
-        />
-        <StatCard
-          title="Aportes"
-          value={fmtNum(stats?.aportes_count ?? 0)}
-          icon={ArrowDownCircle}
-          iconColor="text-emerald-600"
-          trend={{ value: fmt(stats?.aportes_monto ?? 0), isPositive: true }}
-        />
-        <StatCard
-          title="Retiros"
-          value={fmtNum(stats?.retiros_count ?? 0)}
-          icon={ArrowUpCircle}
-          iconColor="text-orange-600"
-          trend={{ value: fmt(stats?.retiros_monto ?? 0), isPositive: false }}
-        />
+      {/* TIPOS */}
+      <div className="grid grid-cols-6 gap-4">
+        {Object.entries(tiposGlobales).map(([tipo, val]) => (
+          <Card key={tipo} className="p-4 text-center">
+            <p className="text-sm text-gray-500">{tipo}</p>
+            <p className="text-xl font-semibold">{fmtNum(val.count)}</p>
+            <p className="text-xs text-gray-400">{fmt(val.monto)}</p>
+          </Card>
+        ))}
       </div>
 
-      {/* Gráfico de volumen diario */}
       <AnomalyChart data={chartData} />
 
-      {/* Tiendas por volumen */}
-      <div>
-        <h2 className="text-xl font-medium mb-4">Actividad por Almacén</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {stores.map((store) => (
-            <RiskCard
-              key={store.name}
-              storeName={store.name}
-              riskLevel={store.riskLevel}
-              anomalyCount={store.anomalyCount}
-            />
-          ))}
-        </div>
+      {/* ALMACENES */}
+      <div className="grid grid-cols-3 gap-4">
+        {storesCalculados.map((store) => (
+          <div key={store.nombre} className="p-4 border rounded">
+            <p>{store.nombre}</p>
+            <p>{fmt(store.total)}</p>
+            <p>{store.cantidad} transacciones</p>
+          </div>
+        ))}
       </div>
 
-      {/* Resumen financiero */}
       <Card className="p-6">
-        <h2 className="text-lg font-medium mb-4">Resumen Financiero (Últimos 7 días)</h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="text-center">
-            <p className="text-sm text-gray-500">Total Entradas</p>
-            <p className="text-2xl font-semibold text-emerald-600 mt-1">{fmt(stats?.total_entrada ?? 0)}</p>
+        <div className="grid grid-cols-3 gap-6 text-center">
+          <div>
+            <p>Entradas</p>
+            <p className="text-green-600">{fmt(stats?.total_entrada)}</p>
           </div>
-          <div className="text-center">
-            <p className="text-sm text-gray-500">Total Salidas</p>
-            <p className="text-2xl font-semibold text-red-600 mt-1">{fmt(stats?.total_salida ?? 0)}</p>
+          <div>
+            <p>Salidas</p>
+            <p className="text-red-600">{fmt(stats?.total_salida)}</p>
           </div>
-          <div className="text-center">
-            <p className="text-sm text-gray-500">Volumen Bruto</p>
-            <p className="text-2xl font-semibold text-blue-600 mt-1">{fmt(stats?.total_monto ?? 0)}</p>
+          <div>
+            <p>Balance</p>
+            <p>{fmt(stats?.total_entrada - stats?.total_salida)}</p>
           </div>
         </div>
       </Card>
+
     </div>
   )
 }
