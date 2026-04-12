@@ -1,4 +1,4 @@
-import { useState, useRef, KeyboardEvent } from "react";
+import { useState, useRef, useEffect, KeyboardEvent } from "react";
 import { Play, RotateCcw, Terminal, Clock, Hash, AlertCircle, ChevronDown } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { Badge } from "../components/ui/badge";
@@ -74,6 +74,19 @@ export default function QueryConsole() {
   const [loading, setLoading] = useState(false);
   const [showExamples, setShowExamples] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const examplesRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (examplesRef.current && !examplesRef.current.contains(e.target as Node)) {
+        setShowExamples(false);
+      }
+    };
+    if (showExamples) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [showExamples]);
 
   const run = async () => {
     if (!sql.trim() || loading) return;
@@ -145,7 +158,7 @@ export default function QueryConsole() {
         </div>
 
         {/* Ejemplos dropdown */}
-        <div className="relative">
+        <div className="relative" ref={examplesRef}>
           <Button
             variant="outline"
             size="sm"
