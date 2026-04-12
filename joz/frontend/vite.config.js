@@ -7,7 +7,7 @@ export default defineConfig({
 
   // base: la SPA se publica bajo /joz/ en producción (nginx).
   // En dev (npm run dev) Vite sirve en localhost:5173/joz/.
-  base: '/joz/',
+  base: '/',
 
   server: {
     // En dev, reenvía /api/ directamente al backend Django

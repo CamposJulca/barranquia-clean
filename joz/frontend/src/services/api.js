@@ -1,15 +1,53 @@
 import axios from 'axios'
 
-const api = axios.create({
+/*const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL,
   timeout: Number(import.meta.env.VITE_API_TIMEOUT) || 15000,
+})*/
+const api = axios.create({
+  baseURL: "http://localhost:8003/api/joz",
 })
 
-export const getStats = () => api.get('/stats/')
-export const getAnomaliasPorDia = () => api.get('/anomalias-por-dia/')
-export const getAlertas = (params) => api.get('/alertas/', { params })
-export const updateAlerta = (id, estado) => api.patch(`/alertas/${id}/`, { estado })
-export const getRiesgos = () => api.get('/riesgos/')
-export const getHistorial = (params) => api.get('/historial/', { params })
-export const getEtlStatus = () => api.get('/etl/status/')
-export const runEtl = (params) => api.post('/etl/run/', params)
+// 🔥 helper para normalizar respuestas del backend
+const unwrap = (res) => res.data?.data ?? res.data
+
+export const getStats = async () => {
+  const res = await api.get('/stats/')
+  return unwrap(res)
+}
+
+export const getAnomaliasPorDia = async () => {
+  const res = await api.get('/anomalias-por-dia/')
+  return unwrap(res)
+}
+
+export const getAlertas = async (params) => {
+  const res = await api.get('/alertas/', { params })
+  return unwrap(res)
+}
+
+export const updateAlerta = async (id, estado) => {
+  const res = await api.patch(`/alertas/${id}/`, { estado })
+  return unwrap(res)
+}
+
+
+export const getRiesgos = async () => {
+  const res = await api.get('/riesgos/')
+  return unwrap(res)
+}
+
+export const getHistorial = async (params) => {
+  const res = await api.get('/historial/', { params })
+  return unwrap(res)
+}
+
+export const getEtlStatus = async () => {
+  const res = await api.get('/etl/status/')
+  return unwrap(res)
+}
+
+export const runEtl = async (params) => {
+  const res = await api.post('/etl/run/', params)
+  return unwrap(res)
+}

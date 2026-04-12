@@ -30,5 +30,7 @@ export const router = createBrowserRouter(
       ],
     },
   ],
-  { basename: import.meta.env.VITE_BASENAME ?? "/serviparamo" }
+  //{ basename: import.meta.env.VITE_BASENAME ?? "/serviparamo" }
+  
+  { basename: import.meta.env.VITE_BASENAME ?? "/" }
 );

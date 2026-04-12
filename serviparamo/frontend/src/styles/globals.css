@@ -1,59 +1,29 @@
 @import "tailwindcss";
 
 /* =========================
-   PALETA INSTITUCIONAL SERVIPARAMO
-   Fuente: https://www.serviparamo.com.co
-   - Azul marino  #1a2d4e  (logo, sidebar)
-   - Azul primario #066aab  (botones, activos, CTAs)
-   - Celeste acento #4bafd6 (highlights, bordes activos)
+   PALETA SERVIPARAMO (NUEVA)
 ========================= */
 
 @theme {
-  --color-sp-navy:        #1a2d4e;
-  --color-sp-navy-dark:   #111e35;
-  --color-sp-navy-border: #253654;
-  --color-sp-blue:        #066aab;
-  --color-sp-blue-hover:  #055990;
-  --color-sp-blue-light:  #dceef8;
-  --color-sp-cyan:        #4bafd6;
-  --color-sp-cyan-light:  #e8f6fc;
-  --color-sp-bg:          #f0f6fb;
+  --color-sp-primary: #066aab;
+  --color-sp-primary-dark: #055990;
+
+  --color-sp-green: #2ecc71;
+  --color-sp-green-dark: #27ae60;
+
+  --color-sp-bg: #f8fbff;
+  --color-sp-white: #ffffff;
+
+  --color-sp-text: #0f1c2e;
+  --color-sp-border: #e2e8f0;
 }
 
 /* =========================
    BASE
 ========================= */
 
-:root {
-  --background: #f0f6fb;
-  --foreground: #0f1c2e;
-}
-
-/* =========================
-   BASE STYLES
-========================= */
-
 body {
-  background: var(--background);
-  color: var(--foreground);
+  background: var(--color-sp-bg);
+  color: var(--color-sp-text);
   font-family: ui-sans-serif, system-ui, sans-serif;
-}
-
-/* =========================
-   TITLES
-========================= */
-
-h1 {
-  font-size: 1.5rem;
-  font-weight: 600;
-}
-
-h2 {
-  font-size: 1.25rem;
-  font-weight: 600;
-}
-
-h3 {
-  font-size: 1.125rem;
-  font-weight: 600;
 }
