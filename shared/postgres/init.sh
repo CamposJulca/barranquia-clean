@@ -7,7 +7,7 @@ set -e
 
 SUPERUSER="${POSTGRES_USER:-barranquia}"
 
-psql -v ON_ERROR_STOP=1 --username "$SUPERUSER" <<-EOSQL
+psql -v ON_ERROR_STOP=1 --username "$SUPERUSER" --dbname "postgres" <<-EOSQL
 
 -- ── Hub (base de datos principal) ────────────────────────────────────────────
 -- POSTGRES_DB ya la crea automáticamente, pero la garantizamos aquí también.

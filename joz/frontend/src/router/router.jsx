@@ -7,6 +7,7 @@ import Alerts from "../pages/Alerts";
 import Risks from "../pages/Risks";
 import History from "../pages/History";
 import Settings from "../pages/Settings";
+import StoreDetail from "../pages/StoreDetail";
 
 // basename="/joz" permite que la SPA viva bajo /joz/ en producción (nginx).
 export const router = createBrowserRouter(
@@ -20,6 +21,8 @@ export const router = createBrowserRouter(
         { path: "risks", element: <Risks /> },
         { path: "history", element: <History /> },
         { path: "settings", element: <Settings /> },
+        { path: "store/:name", element: <StoreDetail />
+}
       ],
     },
   ],
