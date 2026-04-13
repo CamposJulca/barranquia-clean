@@ -64,28 +64,28 @@ export default function Dashboard() {
         const rows = historialRaw?.results ?? []
 
         const chartDataFromHistorial = rows.reduce((acc: any, r: any) => {
-  const date = r.date
+          const date = r.date
 
-  if (!acc[date]) {
-    acc[date] = {
-      date,          // 🔥 clave correcta
-      aportes: 0,
-      retiros: 0
-    }
-  }
+          if (!acc[date]) {
+            acc[date] = {
+              date,
+              aportes: 0,
+              retiros: 0
+            }
+          }
 
-  acc[date].aportes += Number(r.entrada || 0)
-  acc[date].retiros += Number(r.salida || 0)
+          acc[date].aportes += Number(r.entrada || 0)
+          acc[date].retiros += Number(r.salida || 0)
 
-  return acc
-}, {})
+          return acc
+        }, {})
 
-const chartArray = Object.values(chartDataFromHistorial).sort(
-  (a: any, b: any) =>
-    new Date(a.date).getTime() - new Date(b.date).getTime()
-)
+        const chartArray = Object.values(chartDataFromHistorial).sort(
+          (a: any, b: any) =>
+            new Date(a.date).getTime() - new Date(b.date).getTime()
+        )
 
-setChartData(chartArray)
+        setChartData(chartArray)
 
         const categorizar = (r: any): TipoOperacion => {
           const desc = r.descripcion?.toLowerCase() ?? ''
@@ -159,7 +159,6 @@ setChartData(chartArray)
 
       <h1 className="text-3xl">Dashboard</h1>
 
-      {/* KPIs */}
       <div className="grid grid-cols-4 gap-6">
         <StatCard title="Transacciones" value={fmtNum(stats?.total_transacciones)} icon={Activity} />
         <StatCard title="Volumen Total" value={fmt(stats?.total_monto)} icon={DollarSign} />
@@ -167,7 +166,6 @@ setChartData(chartArray)
         <StatCard title="Retiros" value={fmtNum(stats?.retiros_count)} icon={ArrowUpCircle} />
       </div>
 
-      {/* TIPOS */}
       <div className="grid grid-cols-6 gap-4">
         {Object.entries(tiposGlobales).map(([tipo, val]) => (
           <Card key={tipo} className="p-4 text-center">
@@ -180,13 +178,22 @@ setChartData(chartArray)
 
       <AnomalyChart data={chartData} />
 
-      {/* ALMACENES */}
       <div className="grid grid-cols-3 gap-4">
         {storesCalculados.map((store) => (
-          <div key={store.nombre} className="p-4 border rounded">
-            <p>{store.nombre}</p>
-            <p>{fmt(store.total)}</p>
-            <p>{store.cantidad} transacciones</p>
+          <div
+            key={store.nombre}
+            onClick={() => navigate(`/store/${encodeURIComponent(store.nombre)}`)}
+            className="p-4 border rounded-xl cursor-pointer hover:shadow-md transition"
+          >
+            <p className="text-sm text-gray-500">{store.nombre}</p>
+
+            <p className="text-2xl font-semibold mt-2">
+              {fmt(store.total)}
+            </p>
+
+            <p className="text-xs text-gray-400 mt-1">
+              {store.cantidad} transacciones
+            </p>
           </div>
         ))}
       </div>
