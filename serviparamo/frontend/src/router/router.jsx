@@ -22,7 +22,7 @@ export const router = createBrowserRouter(
         { index: true, element: <Dashboard /> },
         { path: "catalog", element: <CatalogManager /> },
         { path: "duplicates", element: <DuplicateDetection /> },
-        { path: "normalization", element: <Normalization /> },
+        /*{ path: "normalization", element: <Normalization /> },*/
         { path: "analytics", element: <PurchasesAnalytics /> },
         { path: "search", element: <SemanticSearch /> },
         { path: "settings", element: <Settings /> },

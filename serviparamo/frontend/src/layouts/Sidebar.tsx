@@ -17,7 +17,7 @@ const navigation = [
   { name: "Catálogo", href: "/catalog", icon: Database },
   { name: "Búsqueda Semántica", href: "/search", icon: Search },
   { name: "Duplicados", href: "/duplicates", icon: Copy },
-  { name: "Normalización", href: "/normalization", icon: Workflow },
+  /*{ name: "Normalización", href: "/normalization", icon: Workflow },*/
   { name: "Analíticas", href: "/analytics", icon: BarChart3 },
   { name: "Consola SQL", href: "/query", icon: Terminal },
   { name: "Configuración", href: "/settings", icon: Settings },
