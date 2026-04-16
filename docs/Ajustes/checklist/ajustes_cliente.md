@@ -75,8 +75,8 @@ Documento extraído de: `docs/Ajustes/Documento Observaciones Joz Y Servipáramo
 - [x] Asegurar consistencia entre el estado real del ETL y el mensaje mostrado.
 
 ### 2.4 Módulo: Monitoreo ELT
-- [ ] Validar el funcionamiento general del módulo.
-- [ ] Confirmar que no se requieren cambios adicionales.
+- [x] Validar el funcionamiento general del módulo.
+- [x] Confirmar que no se requieren cambios adicionales.
 
 ### 2.5 Módulo: Analítica
 - [ ] Ninguna acción requerida.
