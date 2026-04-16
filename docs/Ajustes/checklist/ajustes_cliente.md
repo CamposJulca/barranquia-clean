@@ -51,13 +51,13 @@ Documento extraído de: `docs/Ajustes/Documento Observaciones Joz Y Servipáramo
 - [ ] Ninguna acción requerida.
 
 ### 1.7 Módulo: Configuraciones
-- [ ] Definir alcance funcional de cada sección:
-  - [ ] Usuarios: gestión de accesos.
-  - [ ] Detección: configuración de reglas/anomalías.
-  - [ ] Notificación: canales y alertas.
-  - [ ] Sistema: parámetros generales.
-- [ ] Implementar o deshabilitar temporalmente las opciones sin funcionalidad.
-- [ ] Evitar mostrar features incompletas al usuario final.
+- [x] Definir alcance funcional de cada sección:
+  - [x] Usuarios: gestión de accesos (gestionado por Hub; sección deshabilitada en JOZ).
+  - [x] Detección: configuración de reglas/anomalías (implementado con persistencia GET/PATCH).
+  - [x] Notificación: canales y alertas (sección deshabilitada temporalmente).
+  - [x] Sistema: parámetros generales (sección deshabilitada temporalmente).
+- [x] Implementar o deshabilitar temporalmente las opciones sin funcionalidad.
+- [x] Evitar mostrar features incompletas al usuario final.
 
 ## 2. Proyecto Servipáramo
 
@@ -110,7 +110,8 @@ Documento extraído de: `docs/Ajustes/Documento Observaciones Joz Y Servipáramo
 - [ ] Ajustes en Búsqueda Semántica.
 
 ### Prioridad Baja
-- [ ] Definición funcional de módulos de Configuración (JOZ y Servipáramo).
+- [x] Definición funcional de módulo de Configuración en JOZ.
+- [ ] Definición funcional de módulo de Configuración en Servipáramo.
 - [ ] Mejoras estructurales futuras.
 
 > **Nota:** Validar cada ajuste con el cliente antes de despliegue a producción.
