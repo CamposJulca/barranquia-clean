@@ -219,7 +219,12 @@ def alertas(request, pk=None):
             'descripcion': a.descripcion,
         })
 
-    return Response(_ok({'results': results}, count=total, page=page, page_size=page_size))
+    return Response(_ok({
+        'results':   results,
+        'count':     total,
+        'page':      page,
+        'page_size': page_size,
+    }))
 
 
 @api_view(['GET'])
@@ -296,6 +301,7 @@ def historial(request):
     hasta   = request.GET.get('fecha_hasta', '').strip()
     tipo    = request.GET.get('tipo', '').strip()
     almacen = request.GET.get('almacen', '').strip()
+    origen  = request.GET.get('origen', '').strip()
     q       = request.GET.get('q', '').strip()
 
     if desde:
@@ -306,6 +312,10 @@ def historial(request):
         qs = qs.filter(tipo__icontains=tipo)
     if almacen:
         qs = qs.filter(almacen=almacen)
+    if origen == 'real':
+        qs = qs.filter(estado='cargado')
+    elif origen == 'prueba':
+        qs = qs.filter(estado='seed')
     if q:
         qs = qs.filter(
             Q(cliente__icontains=q) |
@@ -329,7 +339,6 @@ def historial(request):
             'amount':      float(t.monto),
             'entrada':     float(t.entrada) if t.entrada is not None else None,
             'salida':      float(t.salida)  if t.salida  is not None else None,
-            'resultado':   'investigating',
             'estado':      t.estado,
             'analista':    t.usuario_cajero or '—',
             # Campos extendidos de SuperEfectivo
@@ -342,7 +351,12 @@ def historial(request):
         for t in items
     ]
 
-    return Response(_ok({'results': results}, count=total, page=page, page_size=page_size))
+    return Response(_ok({
+        'results':   results,
+        'count':     total,
+        'page':      page,
+        'page_size': page_size,
+    }))
 
 
 @api_view(['POST'])
