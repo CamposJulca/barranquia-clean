@@ -82,10 +82,10 @@ Documento extraído de: `docs/Ajustes/Documento Observaciones Joz Y Servipáramo
 - [ ] Ninguna acción requerida.
 
 ### 2.6 Módulo: Búsqueda Semántica
-- [ ] Validar ejecución del ETL.
-- [ ] Revisar indexación de datos.
-- [ ] Revisar conexión con el motor semántico.
-- [ ] Confirmar disponibilidad de datos para búsqueda.
+- [x] Validar ejecución del ETL.
+- [x] Revisar indexación de datos.
+- [x] Revisar conexión con el motor semántico.
+- [x] Confirmar disponibilidad de datos para búsqueda.
 
 ### 2.7 Módulo: Consola SQL
 - [ ] Ninguna acción requerida.
@@ -107,7 +107,7 @@ Documento extraído de: `docs/Ajustes/Documento Observaciones Joz Y Servipáramo
 
 ### Prioridad Media
 - [x] Implementación de vistas de detalle en Riesgos.
-- [ ] Ajustes en Búsqueda Semántica.
+- [x] Ajustes en Búsqueda Semántica.
 
 ### Prioridad Baja
 - [x] Definición funcional de módulo de Configuración en JOZ.
