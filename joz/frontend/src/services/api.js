@@ -44,6 +44,16 @@ export const getHistorial = async (params) => {
   return unwrap(res)
 }
 
+export const getConfigDeteccion = async () => {
+  const res = await api.get('/config/deteccion/')
+  return unwrap(res)
+}
+
+export const updateConfigDeteccion = async (payload) => {
+  const res = await api.patch('/config/deteccion/', payload)
+  return unwrap(res)
+}
+
 export const getEtlStatus = async () => {
   const res = await api.get('/etl/status/')
   return unwrap(res)

@@ -4,8 +4,9 @@ from rest_framework import status
 from django.db.models import Q, Count, Sum
 from django.utils import timezone
 from datetime import timedelta, date
+from decimal import Decimal, InvalidOperation
 
-from .models import Transaccion, Alerta, Riesgo, ETLLog
+from .models import Transaccion, Alerta, Riesgo, ETLLog, ConfigDeteccion
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
@@ -38,7 +39,154 @@ def _nombre_almacen(codigo):
     return f'ALMACEN {str(codigo).zfill(2)}'
 
 
+def _serializar_config_deteccion(config):
+    return {
+        'id': config.id,
+        'enabled_alto_valor': config.enabled_alto_valor,
+        'enabled_multiples_transacciones': config.enabled_multiples_transacciones,
+        'enabled_horario_inusual': config.enabled_horario_inusual,
+        'enabled_descuentos_excesivos': config.enabled_descuentos_excesivos,
+        'monto_maximo': float(config.monto_maximo),
+        'descuento_maximo_pct': config.descuento_maximo_pct,
+        'transacciones_por_hora': config.transacciones_por_hora,
+        'score_riesgo_min': config.score_riesgo_min,
+        'updated_at': config.updated_at.isoformat() if config.updated_at else None,
+    }
+
+
+def _coerce_bool(value, field_name):
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, (int, float)) and value in (0, 1):
+        return bool(value)
+    if isinstance(value, str):
+        normalized = value.strip().lower()
+        if normalized in ('true', '1', 'si', 'sí', 'yes'):
+            return True
+        if normalized in ('false', '0', 'no'):
+            return False
+    raise ValueError(f'`{field_name}` debe ser booleano.')
+
+
+def _coerce_int(value, field_name, min_value, max_value):
+    if isinstance(value, bool):
+        raise ValueError(f'`{field_name}` debe ser un entero.')
+    try:
+        parsed = int(str(value).strip())
+    except (ValueError, TypeError):
+        raise ValueError(f'`{field_name}` debe ser un entero válido.')
+    if parsed < min_value or parsed > max_value:
+        raise ValueError(f'`{field_name}` debe estar entre {min_value} y {max_value}.')
+    return parsed
+
+
+def _coerce_decimal(value, field_name, min_value, max_value):
+    try:
+        parsed = Decimal(str(value).strip())
+    except (InvalidOperation, AttributeError, TypeError):
+        raise ValueError(f'`{field_name}` debe ser numérico.')
+    if parsed < min_value or parsed > max_value:
+        raise ValueError(f'`{field_name}` debe estar entre {min_value} y {max_value}.')
+    return parsed
+
+
 # ── Vistas ────────────────────────────────────────────────────────────────────
+
+@api_view(['GET', 'PATCH'])
+def config_deteccion(request):
+    """
+    Configuración de reglas de detección (singleton pk=1).
+    GET   -> estado actual
+    PATCH -> actualización parcial
+    """
+    config, _ = ConfigDeteccion.objects.get_or_create(pk=1)
+
+    if request.method == 'GET':
+        return Response(_ok(_serializar_config_deteccion(config)))
+
+    if not isinstance(request.data, dict):
+        return _err('Payload inválido. Se esperaba un objeto JSON.')
+
+    payload = request.data
+    updates = {}
+    field_errors = {}
+
+    bool_fields = [
+        'enabled_alto_valor',
+        'enabled_multiples_transacciones',
+        'enabled_horario_inusual',
+        'enabled_descuentos_excesivos',
+    ]
+    for field in bool_fields:
+        if field in payload:
+            try:
+                updates[field] = _coerce_bool(payload.get(field), field)
+            except ValueError as exc:
+                field_errors[field] = str(exc)
+
+    if 'descuento_maximo_pct' in payload:
+        try:
+            updates['descuento_maximo_pct'] = _coerce_int(
+                payload.get('descuento_maximo_pct'),
+                'descuento_maximo_pct',
+                0,
+                100,
+            )
+        except ValueError as exc:
+            field_errors['descuento_maximo_pct'] = str(exc)
+
+    if 'transacciones_por_hora' in payload:
+        try:
+            updates['transacciones_por_hora'] = _coerce_int(
+                payload.get('transacciones_por_hora'),
+                'transacciones_por_hora',
+                1,
+                500,
+            )
+        except ValueError as exc:
+            field_errors['transacciones_por_hora'] = str(exc)
+
+    if 'score_riesgo_min' in payload:
+        try:
+            updates['score_riesgo_min'] = _coerce_int(
+                payload.get('score_riesgo_min'),
+                'score_riesgo_min',
+                0,
+                100,
+            )
+        except ValueError as exc:
+            field_errors['score_riesgo_min'] = str(exc)
+
+    if 'monto_maximo' in payload:
+        try:
+            updates['monto_maximo'] = _coerce_decimal(
+                payload.get('monto_maximo'),
+                'monto_maximo',
+                Decimal('0.01'),
+                Decimal('9999999999999999.99'),
+            )
+        except ValueError as exc:
+            field_errors['monto_maximo'] = str(exc)
+
+    if field_errors:
+        return Response(
+            {
+                'ok': False,
+                'error': 'Errores de validación en la configuración.',
+                'fields': field_errors,
+            },
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    if not updates:
+        return Response(_ok(_serializar_config_deteccion(config)))
+
+    for field_name, value in updates.items():
+        setattr(config, field_name, value)
+    config.save(update_fields=[*updates.keys(), 'updated_at'])
+
+    return Response(_ok(_serializar_config_deteccion(config)))
+
 
 @api_view(['GET'])
 def stats(request):
