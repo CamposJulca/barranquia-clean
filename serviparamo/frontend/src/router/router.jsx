@@ -9,6 +9,7 @@ import PurchasesAnalytics from "../pages/PurchasesAnalytics";
 import SemanticSearch from "../pages/SemanticSearch";
 import Settings from "../pages/Settings";
 import QueryConsole from "../pages/QueryConsole";
+import AuthGuard from "../guards/AuthGuard";
 
 // basename="/serviparamo" permite que la SPA viva bajo /serviparamo/
 // cuando se sirve detrás del nginx reverse-proxy en Docker.
@@ -17,7 +18,11 @@ export const router = createBrowserRouter(
   [
     {
       path: "/",
-      element: <DashboardLayout />,
+      element: (
+        <AuthGuard>
+          <DashboardLayout />
+        </AuthGuard>
+      ),
       children: [
         { index: true, element: <Dashboard /> },
         { path: "catalog", element: <CatalogManager /> },
