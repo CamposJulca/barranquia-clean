@@ -30,9 +30,9 @@ interface Transaccion {
 
 // 🔥 COLORES
 const riskColorsMap: Record<RiskLevel, string> = {
-  low: 'bg-green-100 text-green-800',
-  medium: 'bg-orange-100 text-orange-800',
-  high: 'bg-red-100 text-red-800',
+  low: 'bg-green-500/20 text-green-300 border border-green-500/30',
+  medium: 'bg-orange-500/20 text-orange-300 border border-orange-500/30',
+  high: 'bg-red-500/20 text-red-300 border border-red-500/30',
 }
 
 const riskLabels: Record<RiskLevel, string> = {
@@ -125,23 +125,23 @@ export default function Risks() {
   }
 
   if (loading) {
-    return <div className="text-center py-10">Cargando riesgos...</div>
+    return <div className="text-center py-10 text-amber-200/60">Cargando riesgos...</div>
   }
 
   return (
     <div className="space-y-6">
 
       <div>
-        <h1 className="text-3xl">Riesgos</h1>
-        <p className="text-gray-500">Análisis de riesgo por sucursales</p>
+        <h1 className="text-2xl font-bold text-white">Riesgos</h1>
+        <p className="text-amber-200/60 text-sm mt-1">Análisis de riesgo por sucursales</p>
       </div>
 
       {/* 🔥 CHART + RANKING */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
         {/* DISTRIBUCIÓN */}
-        <Card className="p-6">
-          <h3 className="text-lg mb-4">Distribución de Riesgos</h3>
+        <Card className="bg-slate-900 border-amber-500/20 p-6">
+          <h3 className="text-base font-semibold text-white mb-4">Distribución de Riesgos</h3>
 
           <ResponsiveContainer width="100%" height={300}>
             <PieChart>
@@ -157,8 +157,8 @@ export default function Risks() {
         </Card>
 
         {/* 🔥 RANKING BI */}
-        <Card className="p-6">
-          <h3 className="text-lg mb-4">Ranking Inteligente</h3>
+        <Card className="bg-slate-900 border-amber-500/20 p-6">
+          <h3 className="text-base font-semibold text-white mb-4">Ranking Inteligente</h3>
 
           <div className="space-y-3">
             {topStores.map((store, index) => {
@@ -168,16 +168,16 @@ export default function Risks() {
               const impacto = clasificarImpacto(score)
 
               return (
-                <div key={store.id} className="flex justify-between p-3 bg-gray-50 rounded">
+                <div key={store.id} className="flex justify-between p-3 bg-slate-800 rounded-lg">
 
                   <div className="flex gap-3 items-center">
-                    <div className="w-8 h-8 flex items-center justify-center bg-blue-600 text-white rounded-full">
+                    <div className="w-8 h-8 flex items-center justify-center bg-amber-500 text-slate-950 font-bold rounded-full text-sm">
                       {index + 1}
                     </div>
 
                     <div>
-                      <p className="font-medium">{store.nombre}</p>
-                      <p className="text-sm text-gray-500">
+                      <p className="font-medium text-slate-100">{store.nombre}</p>
+                      <p className="text-xs text-amber-200/50">
                         {store.anomalias_count} anomalías
                       </p>
                     </div>
@@ -188,7 +188,7 @@ export default function Risks() {
                       {riskLabels[store.nivel_riesgo]}
                     </Badge>
 
-                    <p className="text-xs text-gray-400 mt-1">
+                    <p className="text-xs text-amber-200/50 mt-1">
                       {fmt(monto)}
                     </p>
 
@@ -206,10 +206,10 @@ export default function Risks() {
       </div>
 
       {/* 🔥 INSIGHT */}
-      <Card className="p-6">
-        <h3 className="text-lg mb-2">Análisis Inteligente</h3>
+      <Card className="bg-slate-900 border-amber-500/20 p-6">
+        <h3 className="text-base font-semibold text-white mb-2">Análisis Inteligente</h3>
 
-        <p className="text-sm text-gray-600">
+        <p className="text-sm text-amber-200/60">
           {
             topStores[0]
               ? `La tienda ${topStores[0].nombre} presenta el mayor riesgo con ${topStores[0].anomalias_count} anomalías y un impacto financiero de ${fmt(calcularMonto(topStores[0].nombre))}.`

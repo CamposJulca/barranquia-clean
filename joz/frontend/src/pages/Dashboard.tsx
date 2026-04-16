@@ -180,15 +180,30 @@ setChartData(chartArray)
 
       <AnomalyChart data={chartData} />
 
-      {/* ALMACENES */}
-      <div className="grid grid-cols-3 gap-4">
-        {storesCalculados.map((store) => (
-          <div key={store.nombre} className="p-4 border rounded">
-            <p>{store.nombre}</p>
-            <p>{fmt(store.total)}</p>
-            <p>{store.cantidad} transacciones</p>
-          </div>
-        ))}
+      {/* ALMACENES — clic → detalle */}
+      <div>
+        <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">
+          Almacenes
+        </h2>
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+          {storesCalculados
+            .sort((a, b) => b.total - a.total)
+            .map((store) => (
+            <div
+              key={store.nombre}
+              onClick={() => navigate(`/store/${encodeURIComponent(store.nombre)}`)}
+              className="p-4 bg-slate-900 border border-slate-700 rounded-xl cursor-pointer hover:border-slate-500/40 hover:shadow-lg hover:shadow-slate-800/50 transition-all group"
+            >
+              <p className="text-xs text-amber-200/60 mb-1">{store.nombre}</p>
+              <p className="text-xl font-bold text-amber-400 group-hover:text-amber-300 transition">
+                {fmt(store.total)}
+              </p>
+              <p className="text-xs text-amber-200/40 mt-1">
+                {store.cantidad.toLocaleString('es-CO')} transacciones
+              </p>
+            </div>
+          ))}
+        </div>
       </div>
 
       <Card className="p-6">
