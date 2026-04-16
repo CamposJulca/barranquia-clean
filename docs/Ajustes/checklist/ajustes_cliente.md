@@ -18,8 +18,8 @@ Documento extraído de: `docs/Ajustes/Documento Observaciones Joz Y Servipáramo
 - [ ] Revisar la lógica de login para cada proyecto.
 
 ### 1.2 Módulo: Dashboard
-- [ ] Ajustar contraste y estilos visuales en la vista de detalle por almacén.
-- [ ] Validar correcta visualización de datos según requerimiento del cliente.
+- [x] Ajustar contraste y estilos visuales en la vista de detalle por almacén.
+- [x] Validar correcta visualización de datos según requerimiento del cliente.
 
 ### 1.3 Módulo: Alertas
 - [ ] Corregir lógica de filtrado:

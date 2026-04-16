@@ -24,7 +24,7 @@ export default function Alerts() {
       const params: any = {
         q: searchTerm || undefined,
         nivel_riesgo: riskFilter !== 'all' ? riskFilter : undefined,
-        tienda: storeFilter !== 'all' ? storeFilter : undefined,
+        almacen: storeFilter !== 'all' ? Number(storeFilter) : undefined,
         page_size: 50,
       }
 
@@ -35,11 +35,12 @@ export default function Alerts() {
 
       const formatted: Alert[] = results.map((a: any) => ({
         id: a.id,
-        date: a.fecha ?? a.date,
-        store: a.almacen ?? a.store,
-        anomalyType: a.tipo_anomalia ?? a.anomalyType,
-        amount: a.monto ?? a.amount,
-        riskLevel: a.nivel_riesgo ?? a.riskLevel,
+        date: a.date ?? a.fecha,
+        store: a.store ?? a.almacen,
+        storeCode: a.almacen_codigo ?? null,
+        anomalyType: a.anomalyType ?? a.tipo_anomalia,
+        amount: a.amount ?? a.monto ?? 0,
+        riskLevel: a.riskLevel ?? a.nivel_riesgo,
         status: a.estado,
       }))
 
@@ -58,7 +59,13 @@ export default function Alerts() {
     return () => clearInterval(iv)
   }, [fetchAlerts])
 
-  const stores = Array.from(new Set(alerts.map(a => a.store).filter(Boolean)))
+  const stores = Array.from(
+    new Map(
+      alerts
+        .filter((a) => a.storeCode !== null && a.storeCode !== undefined)
+        .map((a) => [String(a.storeCode), { code: String(a.storeCode), label: a.store }])
+    ).values()
+  )
 
   return (
     <div className="space-y-6">
@@ -102,9 +109,9 @@ export default function Alerts() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Todos</SelectItem>
-              <SelectItem value="Alto">Alto</SelectItem>
-              <SelectItem value="Medio">Medio</SelectItem>
-              <SelectItem value="Bajo">Bajo</SelectItem>
+              <SelectItem value="high">Alto</SelectItem>
+              <SelectItem value="medium">Medio</SelectItem>
+              <SelectItem value="low">Bajo</SelectItem>
             </SelectContent>
           </Select>
           <Select value={storeFilter} onValueChange={setStoreFilter}>
@@ -114,7 +121,7 @@ export default function Alerts() {
             <SelectContent>
               <SelectItem value="all">Todas</SelectItem>
               {stores.map(store => (
-                <SelectItem key={store} value={store}>{store}</SelectItem>
+                <SelectItem key={store.code} value={store.code}>{store.label}</SelectItem>
               ))}
             </SelectContent>
           </Select>
