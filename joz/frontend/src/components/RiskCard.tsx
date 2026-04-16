@@ -12,19 +12,19 @@ interface RiskCardProps {
 
 const riskConfig = {
   low: {
-    color: 'bg-green-100 text-green-800 border-green-200',
+    color: 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30',
     label: 'Bajo',
-    dotColor: 'bg-green-500'
+    dotColor: 'bg-emerald-400'
   },
   medium: {
-    color: 'bg-orange-100 text-orange-800 border-orange-200',
+    color: 'bg-amber-500/15 text-amber-300 border-amber-500/30',
     label: 'Medio',
-    dotColor: 'bg-orange-500'
+    dotColor: 'bg-amber-400'
   },
   high: {
-    color: 'bg-red-100 text-red-800 border-red-200',
+    color: 'bg-red-500/15 text-red-300 border-red-500/30',
     label: 'Alto',
-    dotColor: 'bg-red-500'
+    dotColor: 'bg-red-400'
   }
 };
 
@@ -32,14 +32,14 @@ export function RiskCard({ storeName, riskLevel, anomalyCount }: RiskCardProps) 
   const config = riskConfig[riskLevel];
 
   return (
-    <Card className="p-4 hover:shadow-md transition-shadow">
+    <Card className="bg-slate-800 border-amber-500/20 p-4 hover:bg-slate-700/60 transition-colors">
       <div className="flex items-start justify-between mb-3">
         <div>
-          <h4 className="font-medium">{storeName}</h4>
-          <p className="text-sm text-gray-500 mt-1">{anomalyCount} anomalías detectadas</p>
+          <h4 className="font-medium text-slate-100">{storeName}</h4>
+          <p className="text-sm text-amber-200/50 mt-1">{anomalyCount} anomalías detectadas</p>
         </div>
         {riskLevel === 'high' && (
-          <AlertTriangle className="w-5 h-5 text-red-500" />
+          <AlertTriangle className="w-5 h-5 text-red-400" />
         )}
       </div>
       <div className="flex items-center gap-2">
