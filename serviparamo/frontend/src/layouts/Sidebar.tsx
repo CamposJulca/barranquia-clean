@@ -12,6 +12,8 @@ import {
   ArrowLeft,
 } from "lucide-react";
 
+const HUB_URL = import.meta.env.VITE_HUB_URL ?? '/'
+
 const navigation = [
   { name: "Panel Principal", href: "/", icon: LayoutDashboard },
   { name: "Catálogo", href: "/catalog", icon: Database },
@@ -33,7 +35,7 @@ export default function Sidebar() {
       <div className="flex items-center px-5 py-4 border-b border-white/10 gap-3">
 
         <a
-          href="http://localhost:8006"
+          href={HUB_URL}
           className="group"
         >
           <div className="w-18 h-18 rounded-full bg-white flex items-center justify-center overflow-hidden shadow-sm transition group-hover:scale-105 group-hover:shadow-lg">

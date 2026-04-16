@@ -1,17 +1,35 @@
 import axios from 'axios'
 import useSessionStore from '../store/useSessionStore'
 
+const HUB_URL = import.meta.env.VITE_HUB_URL ?? '/'
+
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL,
   timeout: Number(import.meta.env.VITE_API_TIMEOUT) || 10000,
 })
 
+const getToken = () => {
+  const storeToken = useSessionStore.getState().token
+  if (storeToken && storeToken.trim().length > 0) return storeToken.trim()
+
+  const localToken = localStorage.getItem('token')
+  if (!localToken) return null
+  const trimmed = localToken.trim()
+  return trimmed.length > 0 ? trimmed : null
+}
+
+const logoutAndRedirect = () => {
+  useSessionStore.getState().setToken(null)
+  localStorage.removeItem('token')
+  window.location.replace(HUB_URL)
+}
+
 api.interceptors.request.use(
   (config) => {
-    const token = useSessionStore.getState().token
+    const token = getToken()
 
     if (token) {
-      config.headers.Authorization = `Bearer ${token}`
+      config.headers.Authorization = `Token ${token}`
     }
 
     return config
@@ -22,6 +40,11 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response) => response,
   (error) => {
+    if (error?.response?.status === 401) {
+      logoutAndRedirect()
+      return Promise.reject(error)
+    }
+
     if (error.response) {
       console.error('API Error:', error.response.data)
     } else if (error.request) {

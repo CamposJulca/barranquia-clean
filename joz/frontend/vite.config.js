@@ -6,8 +6,8 @@ export default defineConfig({
   plugins: [react()],
 
   // base: la SPA se publica bajo /joz/ en producción (nginx).
-  // En dev (npm run dev) Vite sirve en localhost:5173/joz/.
-  base: '/',
+  // VITE_BASENAME se inyecta en el Docker build; en dev queda '/'.
+  base: process.env.VITE_BASENAME ? `${process.env.VITE_BASENAME}/` : '/',
 
   server: {
     // En dev, reenvía /api/ directamente al backend Django

@@ -6,7 +6,7 @@ import {
   CheckCircle, ChevronRight, ChevronLeft, AlertCircle, Loader,
 } from "lucide-react";
 import { Separator } from "../components/ui/separator";
-import { getDuplicados, aprobarSKU } from "../services/serviparamoService";
+import { getDuplicados, aprobarSKU, getETLStatus } from "../services/serviparamoService";
 
 interface SKUItem {
   id: number;
@@ -36,6 +36,14 @@ interface DupsResponse {
   grupos: Grupo[];
 }
 
+interface ETLStatus {
+  corriendo: boolean;
+  resumen: {
+    total_tablas: number;
+    tablas_con_error: number;
+  } | null;
+}
+
 export default function DuplicateDetection() {
   const [data, setData] = useState<DupsResponse | null>(null);
   const [loading, setLoading] = useState(true);
@@ -43,16 +51,25 @@ export default function DuplicateDetection() {
   const [groupIndex, setGroupIndex] = useState(0);
   const [page, setPage] = useState(1);
   const [approving, setApproving] = useState(false);
+  const [etlStatus, setEtlStatus] = useState<ETLStatus | null>(null);
 
   const fetchDuplicados = async (p: number) => {
     setLoading(true);
     setError(false);
     try {
-      const res = await getDuplicados({ page: p, page_size: 10 });
-      setData(res);
+      const [dupRes, etlRes] = await Promise.all([
+        getDuplicados({ page: p, page_size: 10 }),
+        getETLStatus(),
+      ]);
+      setData(dupRes);
+      setEtlStatus({
+        corriendo: Boolean(etlRes?.corriendo),
+        resumen: etlRes?.resumen ?? null,
+      });
       setGroupIndex(0);
     } catch {
       setError(true);
+      setEtlStatus(null);
     } finally {
       setLoading(false);
     }
@@ -108,6 +125,22 @@ export default function DuplicateDetection() {
   }
 
   if (!data || data.total_grupos === 0) {
+    const getEmptyStateMessage = () => {
+      if (!etlStatus) {
+        return "Cargando estado del sistema...";
+      }
+      if (etlStatus.corriendo) {
+        return "El ETL está en ejecución. Espera a que finalice para ver duplicados actualizados.";
+      }
+      if (!etlStatus.resumen) {
+        return "Aún no hay historial ETL. Ejecuta la primera sincronización desde Configuración.";
+      }
+      if (etlStatus.resumen.tablas_con_error > 0) {
+        return "La última ejecución del ETL terminó con errores. Revisa Configuración → Sincronización ERP.";
+      }
+      return "No se detectaron duplicados con la última ejecución del ETL.";
+    };
+
     return (
       <div className="p-6">
         <div className="max-w-4xl mx-auto text-center py-12">
@@ -116,7 +149,7 @@ export default function DuplicateDetection() {
             No hay duplicados detectados
           </h2>
           <p className="text-gray-600">
-            Ejecuta el ETL y la normalización para detectar SKUs duplicados.
+            {getEmptyStateMessage()}
           </p>
         </div>
       </div>

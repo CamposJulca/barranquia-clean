@@ -43,13 +43,13 @@ export function AnomalyChart({ data }: AnomalyChartProps) {
   const safeData = Array.isArray(data) ? data : []
 
   return (
-    <Card className="p-6">
+    <Card className="p-6 bg-slate-900 border-amber-500/20">
 
-      <h3 className="text-lg font-medium mb-1">
+      <h3 className="text-lg font-medium text-white mb-1">
         Transacciones Diarias
       </h3>
 
-      <p className="text-sm text-gray-500 mb-4">
+      <p className="text-sm text-amber-200/60 mb-4">
         Aportes vs Retiros por día
       </p>
 
@@ -60,33 +60,39 @@ export function AnomalyChart({ data }: AnomalyChartProps) {
           margin={{ top: 4, right: 16, left: 0, bottom: 0 }}
         >
 
-          <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+          <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
 
           <XAxis
             dataKey="date"
             tickFormatter={formatDate}
-            stroke="#6b7280"
+            stroke="#94a3b8"
           />
 
           <YAxis
-            stroke="#6b7280"
+            stroke="#94a3b8"
             tickFormatter={(v) =>
               v >= 1000 ? `${(v / 1000).toFixed(0)}k` : v
             }
           />
 
           <Tooltip
-  labelFormatter={(label: any) => formatDate(label)}
-  formatter={(value: any, name: any) => [
-    Number(value ?? 0).toLocaleString('es-CO'),
-    name === 'aportes' ? 'Aportes' : 'Retiros'
-  ]}
-/>
+            labelFormatter={(label: any) => formatDate(label)}
+            formatter={(value: any, name: any) => [
+              Number(value ?? 0).toLocaleString('es-CO'),
+              name === 'aportes' ? 'Aportes' : 'Retiros'
+            ]}
+            contentStyle={{
+              backgroundColor: '#0f172a',
+              borderColor: '#f59e0b55',
+              color: '#f8fafc'
+            }}
+          />
 
           <Legend
             formatter={(v) =>
               v === 'aportes' ? 'Aportes' : 'Retiros'
             }
+            wrapperStyle={{ color: '#cbd5e1' }}
           />
 
           {/* 🔥 BARRAS */}

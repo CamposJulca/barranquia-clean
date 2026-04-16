@@ -112,6 +112,31 @@ class Riesgo(models.Model):
         return f"{self.categoria} — {self.nivel}"
 
 
+class ConfigDeteccion(models.Model):
+    """Configuración funcional de reglas y umbrales de detección."""
+
+    # Singleton lógico (siempre pk=1)
+    id = models.PositiveSmallIntegerField(primary_key=True, default=1, editable=False)
+
+    enabled_alto_valor = models.BooleanField(default=True)
+    enabled_multiples_transacciones = models.BooleanField(default=True)
+    enabled_horario_inusual = models.BooleanField(default=True)
+    enabled_descuentos_excesivos = models.BooleanField(default=False)
+
+    monto_maximo = models.DecimalField(max_digits=18, decimal_places=2, default=10000000)
+    descuento_maximo_pct = models.IntegerField(default=50)
+    transacciones_por_hora = models.IntegerField(default=20)
+    score_riesgo_min = models.IntegerField(default=75)
+
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'joz_config_deteccion'
+
+    def __str__(self):
+        return "Config Detección"
+
+
 class ETLLog(models.Model):
     """Registro de auditoría de cada ejecución del ETL contra la API de SuperEfectivo."""
 

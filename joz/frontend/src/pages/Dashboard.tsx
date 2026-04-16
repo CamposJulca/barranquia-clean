@@ -152,12 +152,12 @@ setChartData(chartArray)
   const fmtNum = (n: number) =>
     new Intl.NumberFormat('es-CO').format(n)
 
-  if (loading) return <div>Cargando...</div>
+  if (loading) return <div className="text-amber-200/70">Cargando...</div>
 
   return (
     <div className="space-y-6">
 
-      <h1 className="text-3xl">Dashboard</h1>
+      <h1 className="text-3xl font-bold text-white">Dashboard</h1>
 
       {/* KPIs */}
       <div className="grid grid-cols-4 gap-6">
@@ -170,40 +170,55 @@ setChartData(chartArray)
       {/* TIPOS */}
       <div className="grid grid-cols-6 gap-4">
         {Object.entries(tiposGlobales).map(([tipo, val]) => (
-          <Card key={tipo} className="p-4 text-center">
-            <p className="text-sm text-gray-500">{tipo}</p>
-            <p className="text-xl font-semibold">{fmtNum(val.count)}</p>
-            <p className="text-xs text-gray-400">{fmt(val.monto)}</p>
+          <Card key={tipo} className="p-4 text-center bg-slate-900 border-amber-500/20 text-amber-100">
+            <p className="text-[11px] uppercase tracking-wide text-amber-200/60">{tipo}</p>
+            <p className="text-xl font-semibold text-white">{fmtNum(val.count)}</p>
+            <p className="text-xs text-amber-300/70">{fmt(val.monto)}</p>
           </Card>
         ))}
       </div>
 
       <AnomalyChart data={chartData} />
 
-      {/* ALMACENES */}
-      <div className="grid grid-cols-3 gap-4">
-        {storesCalculados.map((store) => (
-          <div key={store.nombre} className="p-4 border rounded">
-            <p>{store.nombre}</p>
-            <p>{fmt(store.total)}</p>
-            <p>{store.cantidad} transacciones</p>
-          </div>
-        ))}
+      {/* ALMACENES — clic → detalle */}
+      <div>
+        <h2 className="text-sm font-semibold text-amber-200/70 uppercase tracking-wide mb-3">
+          Almacenes
+        </h2>
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+          {storesCalculados
+            .sort((a, b) => b.total - a.total)
+            .map((store) => (
+            <div
+              key={store.nombre}
+              onClick={() => navigate(`/store/${encodeURIComponent(store.nombre)}`)}
+              className="p-4 bg-slate-900 border border-slate-700 rounded-xl cursor-pointer hover:border-slate-500/40 hover:shadow-lg hover:shadow-slate-800/50 transition-all group"
+            >
+              <p className="text-xs text-amber-200/60 mb-1">{store.nombre}</p>
+              <p className="text-xl font-bold text-amber-400 group-hover:text-amber-300 transition">
+                {fmt(store.total)}
+              </p>
+              <p className="text-xs text-amber-200/40 mt-1">
+                {store.cantidad.toLocaleString('es-CO')} transacciones
+              </p>
+            </div>
+          ))}
+        </div>
       </div>
 
-      <Card className="p-6">
+      <Card className="p-6 bg-slate-900 border-amber-500/20">
         <div className="grid grid-cols-3 gap-6 text-center">
           <div>
-            <p>Entradas</p>
-            <p className="text-green-600">{fmt(stats?.total_entrada)}</p>
+            <p className="text-amber-200/70">Entradas</p>
+            <p className="text-emerald-300">{fmt(stats?.total_entrada)}</p>
           </div>
           <div>
-            <p>Salidas</p>
-            <p className="text-red-600">{fmt(stats?.total_salida)}</p>
+            <p className="text-amber-200/70">Salidas</p>
+            <p className="text-rose-300">{fmt(stats?.total_salida)}</p>
           </div>
           <div>
-            <p>Balance</p>
-            <p>{fmt(stats?.total_entrada - stats?.total_salida)}</p>
+            <p className="text-amber-200/70">Balance</p>
+            <p className="text-white">{fmt(stats?.total_entrada - stats?.total_salida)}</p>
           </div>
         </div>
       </Card>

@@ -22,8 +22,10 @@ urlpatterns = [
     # ETL
     path('etl/status/',          views.etl_status,      name='serviparamo-etl-status'),
     path('etl/run/',             views.etl_run,         name='serviparamo-etl-run'),
+    path('configuracion/',       views.configuracion,   name='serviparamo-configuracion'),
 
     # Normalización semántica (existente)
+    path('buscar/status/',       views.buscar_status,   name='serviparamo-buscar-status'),
     path('buscar/',              views.buscar,          name='serviparamo-buscar'),
     path('duplicados/',          views.duplicados,      name='serviparamo-duplicados'),
     path('aprobar/',             views.aprobar,         name='serviparamo-aprobar'),
