@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { Card } from '../components/ui/card';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
@@ -7,115 +7,426 @@ import { Switch } from '../components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import { Badge } from '../components/ui/badge';
-import { User, Bell, Shield, Settings as SettingsIcon, Database, Play, RefreshCw } from 'lucide-react';
-import { getEtlStatus, runEtl } from '../services/api';
+import {
+  User,
+  Bell,
+  Shield,
+  Settings as SettingsIcon,
+  Database,
+  Play,
+  RefreshCw,
+  Lock,
+  Loader2,
+} from 'lucide-react';
+import {
+  getConfigDeteccion,
+  getEtlStatusFull,
+  runEtl,
+  updateConfigDeteccion,
+} from '../services/api';
 
-// ── ETL Tab ────────────────────────────────────────────────────────────────────
+type EtlLog = {
+  id: number
+  fecha_consulta: string
+  almacen: number
+  filas_recibidas: number
+  filas_insertadas: number
+  filas_error: number
+  finalizado_en: string | null
+  mensaje: string
+}
+
+type DetectionConfig = {
+  enabled_alto_valor: boolean
+  enabled_multiples_transacciones: boolean
+  enabled_horario_inusual: boolean
+  enabled_descuentos_excesivos: boolean
+  monto_maximo: number
+  descuento_maximo_pct: number
+  transacciones_por_hora: number
+  score_riesgo_min: number
+  updated_at?: string | null
+}
+
+type DisabledSectionProps = {
+  title: string
+  badgeText: string
+  message: string
+  detail: string
+  icon: ReactNode
+}
+
+const DETECTION_DEFAULTS: DetectionConfig = {
+  enabled_alto_valor: true,
+  enabled_multiples_transacciones: true,
+  enabled_horario_inusual: true,
+  enabled_descuentos_excesivos: false,
+  monto_maximo: 10000000,
+  descuento_maximo_pct: 50,
+  transacciones_por_hora: 20,
+  score_riesgo_min: 75,
+}
+
+function DisabledSection({ title, badgeText, message, detail, icon }: DisabledSectionProps) {
+  return (
+    <Card className="border-amber-500/20 bg-slate-800/70 p-6">
+      <div className="flex items-start justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <div className="rounded-md border border-amber-500/30 bg-amber-500/10 p-2 text-amber-300">
+            {icon}
+          </div>
+          <div>
+            <h3 className="text-lg font-medium text-slate-100">{title}</h3>
+            <p className="text-sm text-amber-200/70">{message}</p>
+          </div>
+        </div>
+        <Badge className="border-amber-500/40 bg-amber-500/15 text-amber-200">
+          <Lock className="mr-1 h-3.5 w-3.5" />
+          {badgeText}
+        </Badge>
+      </div>
+      <div className="mt-5 rounded-lg border border-slate-700 bg-slate-900/60 p-4 text-sm text-slate-300">
+        {detail}
+      </div>
+    </Card>
+  )
+}
+
+function DetectionPanel() {
+  const [config, setConfig] = useState<DetectionConfig>(DETECTION_DEFAULTS)
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
+  const [success, setSuccess] = useState('')
+
+  const loadConfig = async () => {
+    setLoading(true)
+    setError('')
+    try {
+      const data = await getConfigDeteccion()
+      setConfig({
+        enabled_alto_valor: Boolean(data?.enabled_alto_valor),
+        enabled_multiples_transacciones: Boolean(data?.enabled_multiples_transacciones),
+        enabled_horario_inusual: Boolean(data?.enabled_horario_inusual),
+        enabled_descuentos_excesivos: Boolean(data?.enabled_descuentos_excesivos),
+        monto_maximo: Number(data?.monto_maximo ?? DETECTION_DEFAULTS.monto_maximo),
+        descuento_maximo_pct: Number(data?.descuento_maximo_pct ?? DETECTION_DEFAULTS.descuento_maximo_pct),
+        transacciones_por_hora: Number(data?.transacciones_por_hora ?? DETECTION_DEFAULTS.transacciones_por_hora),
+        score_riesgo_min: Number(data?.score_riesgo_min ?? DETECTION_DEFAULTS.score_riesgo_min),
+        updated_at: data?.updated_at ?? null,
+      })
+    } catch (e: any) {
+      setError(e?.response?.data?.error ?? 'No se pudo cargar la configuración de detección.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    loadConfig()
+  }, [])
+
+  const updateNumber = (field: keyof DetectionConfig, value: string) => {
+    setSuccess('')
+    setConfig(prev => ({ ...prev, [field]: Number(value) }))
+  }
+
+  const updateSwitch = (field: keyof DetectionConfig, checked: boolean) => {
+    setSuccess('')
+    setConfig(prev => ({ ...prev, [field]: checked }))
+  }
+
+  const handleSave = async () => {
+    setSaving(true)
+    setError('')
+    setSuccess('')
+    try {
+      const saved = await updateConfigDeteccion({
+        enabled_alto_valor: config.enabled_alto_valor,
+        enabled_multiples_transacciones: config.enabled_multiples_transacciones,
+        enabled_horario_inusual: config.enabled_horario_inusual,
+        enabled_descuentos_excesivos: config.enabled_descuentos_excesivos,
+        monto_maximo: config.monto_maximo,
+        descuento_maximo_pct: config.descuento_maximo_pct,
+        transacciones_por_hora: config.transacciones_por_hora,
+        score_riesgo_min: config.score_riesgo_min,
+      })
+      setConfig(prev => ({ ...prev, updated_at: saved?.updated_at ?? prev.updated_at }))
+      setSuccess('Configuración guardada correctamente.')
+    } catch (e: any) {
+      const backendError = e?.response?.data?.error
+      const fieldErrors = e?.response?.data?.fields
+      if (fieldErrors && typeof fieldErrors === 'object') {
+        const details = Object.values(fieldErrors).join(' | ')
+        setError(details || backendError || 'Hay errores de validación.')
+      } else {
+        setError(backendError ?? 'No se pudo guardar la configuración.')
+      }
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  if (loading) {
+    return (
+      <Card className="border-amber-500/20 bg-slate-800/70 p-6">
+        <div className="flex items-center gap-2 text-amber-200/80">
+          <Loader2 className="h-4 w-4 animate-spin" />
+          Cargando configuración de detección...
+        </div>
+      </Card>
+    )
+  }
+
+  return (
+    <Card className="border-amber-500/20 bg-slate-800/70 p-6">
+      <div className="mb-5 flex items-center justify-between gap-3">
+        <div>
+          <h3 className="text-lg font-medium text-slate-100">Reglas de Detección de Anomalías</h3>
+          <p className="text-sm text-amber-200/60">Configuración persistente (GET/PATCH) del módulo de detección.</p>
+        </div>
+        {config.updated_at && (
+          <span className="text-xs text-slate-400">
+            Última actualización: {new Date(config.updated_at).toLocaleString('es-CO')}
+          </span>
+        )}
+      </div>
+
+      <div className="space-y-4">
+        <div className="flex items-center justify-between rounded-lg border border-slate-700 bg-slate-900/60 p-4">
+          <div>
+            <p className="font-medium text-slate-100">Transacciones de alto valor</p>
+            <p className="text-sm text-slate-400">Detectar transacciones superiores al umbral configurado.</p>
+          </div>
+          <Switch
+            checked={config.enabled_alto_valor}
+            onCheckedChange={(v) => updateSwitch('enabled_alto_valor', v)}
+            disabled={saving}
+          />
+        </div>
+
+        <div className="flex items-center justify-between rounded-lg border border-slate-700 bg-slate-900/60 p-4">
+          <div>
+            <p className="font-medium text-slate-100">Múltiples transacciones</p>
+            <p className="text-sm text-slate-400">Alertar actividad repetitiva en ventana corta.</p>
+          </div>
+          <Switch
+            checked={config.enabled_multiples_transacciones}
+            onCheckedChange={(v) => updateSwitch('enabled_multiples_transacciones', v)}
+            disabled={saving}
+          />
+        </div>
+
+        <div className="flex items-center justify-between rounded-lg border border-slate-700 bg-slate-900/60 p-4">
+          <div>
+            <p className="font-medium text-slate-100">Horario inusual</p>
+            <p className="text-sm text-slate-400">Detectar actividad fuera del horario operativo normal.</p>
+          </div>
+          <Switch
+            checked={config.enabled_horario_inusual}
+            onCheckedChange={(v) => updateSwitch('enabled_horario_inusual', v)}
+            disabled={saving}
+          />
+        </div>
+
+        <div className="flex items-center justify-between rounded-lg border border-slate-700 bg-slate-900/60 p-4">
+          <div>
+            <p className="font-medium text-slate-100">Descuentos excesivos</p>
+            <p className="text-sm text-slate-400">Aplicar alertas por descuentos fuera de rango.</p>
+          </div>
+          <Switch
+            checked={config.enabled_descuentos_excesivos}
+            onCheckedChange={(v) => updateSwitch('enabled_descuentos_excesivos', v)}
+            disabled={saving}
+          />
+        </div>
+      </div>
+
+      <div className="mt-6 border-t border-slate-700 pt-6">
+        <h4 className="mb-3 font-medium text-slate-100">Umbrales</h4>
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          <div className="space-y-2">
+            <Label htmlFor="amountThreshold" className="text-slate-200">Monto máximo (COP)</Label>
+            <Input
+              id="amountThreshold"
+              type="number"
+              value={config.monto_maximo}
+              onChange={(e) => updateNumber('monto_maximo', e.target.value)}
+              className="border-slate-600 bg-slate-900 text-slate-100"
+              disabled={saving}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="discountThreshold" className="text-slate-200">Descuento máximo (%)</Label>
+            <Input
+              id="discountThreshold"
+              type="number"
+              value={config.descuento_maximo_pct}
+              onChange={(e) => updateNumber('descuento_maximo_pct', e.target.value)}
+              className="border-slate-600 bg-slate-900 text-slate-100"
+              disabled={saving}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="transactionCount" className="text-slate-200">Transacciones por hora</Label>
+            <Input
+              id="transactionCount"
+              type="number"
+              value={config.transacciones_por_hora}
+              onChange={(e) => updateNumber('transacciones_por_hora', e.target.value)}
+              className="border-slate-600 bg-slate-900 text-slate-100"
+              disabled={saving}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="riskScore" className="text-slate-200">Puntuación de riesgo mínima</Label>
+            <Input
+              id="riskScore"
+              type="number"
+              value={config.score_riesgo_min}
+              onChange={(e) => updateNumber('score_riesgo_min', e.target.value)}
+              className="border-slate-600 bg-slate-900 text-slate-100"
+              disabled={saving}
+            />
+          </div>
+        </div>
+      </div>
+
+      {error && (
+        <div className="mt-4 rounded-md border border-red-500/40 bg-red-500/10 px-3 py-2 text-sm text-red-200">
+          {error}
+        </div>
+      )}
+
+      {success && (
+        <div className="mt-4 rounded-md border border-emerald-500/40 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-200">
+          {success}
+        </div>
+      )}
+
+      <Button
+        className="mt-6 w-full bg-amber-500 text-slate-900 hover:bg-amber-400"
+        onClick={handleSave}
+        disabled={saving}
+      >
+        {saving ? 'Guardando...' : 'Guardar Configuración'}
+      </Button>
+    </Card>
+  )
+}
 
 function EtlPanel() {
-  const today = new Date().toISOString().slice(0, 10);
-  const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+  const today = new Date().toISOString().slice(0, 10)
+  const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10)
 
-  const [fechaInicio, setFechaInicio] = useState(yesterday);
-  const [fechaFin, setFechaFin] = useState(today);
-  const [almacen, setAlmacen] = useState('0');
-  const [logs, setLogs] = useState<any[]>([]);
-  const [corriendo, setCorriendo] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [mensaje, setMensaje] = useState('');
+  const [fechaInicio, setFechaInicio] = useState(yesterday)
+  const [fechaFin, setFechaFin] = useState(today)
+  const [almacen, setAlmacen] = useState('0')
+  const [logs, setLogs] = useState<EtlLog[]>([])
+  const [corriendo, setCorriendo] = useState(false)
+  const [loading, setLoading] = useState(false)
+  const [mensaje, setMensaje] = useState('')
 
   const cargarEstado = async () => {
     try {
-      const res = await getEtlStatus();
-      const d = res.data?.data ?? res.data;
-      setCorriendo(res.data?.corriendo ?? false);
-      setLogs(Array.isArray(d) ? d : []);
+      const res = await getEtlStatusFull()
+      setCorriendo(Boolean(res?.corriendo))
+      setLogs(Array.isArray(res?.data) ? res.data : [])
     } catch {
-      // silent
+      setCorriendo(false)
+      setLogs([])
     }
-  };
+  }
 
   useEffect(() => {
-    cargarEstado();
-    const interval = setInterval(cargarEstado, 5000);
-    return () => clearInterval(interval);
-  }, []);
+    cargarEstado()
+    const interval = setInterval(cargarEstado, 5000)
+    return () => clearInterval(interval)
+  }, [])
 
   const handleRun = async () => {
-    setLoading(true);
-    setMensaje('');
+    setLoading(true)
+    setMensaje('')
     try {
       const res = await runEtl({
         fecha_inicio: fechaInicio,
         fecha_fin: fechaFin,
-        almacen: parseInt(almacen),
-      });
-      const d = res.data?.data ?? res.data;
-      setMensaje(d?.mensaje ?? 'ETL iniciado.');
-      setCorriendo(true);
+        almacen: parseInt(almacen, 10),
+      })
+      setMensaje(res?.mensaje ?? 'ETL iniciado.')
+      setCorriendo(true)
     } catch (e: any) {
-      setMensaje(`Error: ${e?.response?.data?.error ?? e.message}`);
+      setMensaje(`Error: ${e?.response?.data?.error ?? e.message}`)
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-  };
+  }
 
   const statusBadge = corriendo
-    ? <Badge className="bg-yellow-100 text-yellow-800 border-yellow-300">Corriendo</Badge>
-    : <Badge className="bg-green-100 text-green-800 border-green-300">En reposo</Badge>;
+    ? <Badge className="border-yellow-500/40 bg-yellow-500/20 text-yellow-200">Corriendo</Badge>
+    : <Badge className="border-emerald-500/40 bg-emerald-500/20 text-emerald-200">En reposo</Badge>
 
   return (
     <div className="space-y-6">
-
-      {/* Estado actual */}
-      <Card className="p-6">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-medium">Estado del ETL</h3>
+      <Card className="border-amber-500/20 bg-slate-800/70 p-6">
+        <div className="mb-4 flex items-center justify-between">
+          <h3 className="text-lg font-medium text-slate-100">Estado del ETL</h3>
           <div className="flex items-center gap-2">
             {statusBadge}
-            <Button variant="outline" size="sm" onClick={cargarEstado}>
-              <RefreshCw className="w-4 h-4" />
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={cargarEstado}
+              className="border-slate-600 bg-slate-900 text-slate-100 hover:bg-slate-800"
+            >
+              <RefreshCw className="h-4 w-4" />
             </Button>
           </div>
         </div>
-        <p className="text-sm text-gray-500">
-          El ETL consume la API REST de SuperEfectivo y carga los movimientos en la base de datos local.
-          Se ejecuta en segundo plano; el estado se actualiza cada 5 segundos.
+        <p className="text-sm text-amber-200/70">
+          El ETL consume la API de SuperEfectivo y carga movimientos en la base local.
+          El estado se actualiza automáticamente cada 5 segundos.
         </p>
       </Card>
 
-      {/* Disparar ETL */}
-      <Card className="p-6">
-        <h3 className="text-lg font-medium mb-4">Ejecutar ETL</h3>
-        <div className="grid grid-cols-3 gap-4 mb-4">
+      <Card className="border-amber-500/20 bg-slate-800/70 p-6">
+        <h3 className="mb-4 text-lg font-medium text-slate-100">Ejecutar ETL</h3>
+        <div className="mb-4 grid grid-cols-1 gap-4 md:grid-cols-3">
           <div className="space-y-2">
-            <Label htmlFor="fechaInicio">Fecha inicio</Label>
+            <Label htmlFor="fechaInicio" className="text-slate-200">Fecha inicio</Label>
             <Input
               id="fechaInicio"
               type="date"
               value={fechaInicio}
               onChange={e => setFechaInicio(e.target.value)}
+              className="border-slate-600 bg-slate-900 text-slate-100"
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="fechaFin">Fecha fin</Label>
+            <Label htmlFor="fechaFin" className="text-slate-200">Fecha fin</Label>
             <Input
               id="fechaFin"
               type="date"
               value={fechaFin}
               onChange={e => setFechaFin(e.target.value)}
+              className="border-slate-600 bg-slate-900 text-slate-100"
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="almacen">Almacén</Label>
+            <Label htmlFor="almacen" className="text-slate-200">Almacén</Label>
             <Select value={almacen} onValueChange={setAlmacen}>
-              <SelectTrigger>
+              <SelectTrigger id="almacen" className="border-slate-600 bg-slate-900 text-slate-100">
                 <SelectValue />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="border-slate-600 bg-slate-900 text-slate-100">
                 <SelectItem value="0">Todos (0)</SelectItem>
                 {Array.from({ length: 30 }, (_, i) => i + 1).map(n => (
-                  <SelectItem key={n} value={String(n)}>Almacén {String(n).padStart(2, '0')}</SelectItem>
+                  <SelectItem key={n} value={String(n)}>
+                    Almacén {String(n).padStart(2, '0')}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -123,7 +434,7 @@ function EtlPanel() {
         </div>
 
         {mensaje && (
-          <p className={`text-sm mb-4 ${mensaje.startsWith('Error') ? 'text-red-600' : 'text-green-600'}`}>
+          <p className={`mb-4 text-sm ${mensaje.startsWith('Error') ? 'text-red-300' : 'text-emerald-300'}`}>
             {mensaje}
           </p>
         )}
@@ -131,42 +442,43 @@ function EtlPanel() {
         <Button
           onClick={handleRun}
           disabled={loading || corriendo}
-          className="w-full flex items-center gap-2"
+          className="w-full bg-amber-500 text-slate-900 hover:bg-amber-400"
         >
-          <Play className="w-4 h-4" />
+          <Play className="mr-2 h-4 w-4" />
           {corriendo ? 'ETL en ejecución...' : loading ? 'Iniciando...' : 'Ejecutar ETL'}
         </Button>
       </Card>
 
-      {/* Historial de ejecuciones */}
-      <Card className="p-6">
-        <h3 className="text-lg font-medium mb-4">Últimas ejecuciones</h3>
+      <Card className="border-amber-500/20 bg-slate-800/70 p-6">
+        <h3 className="mb-4 text-lg font-medium text-slate-100">Últimas ejecuciones</h3>
         {logs.length === 0 ? (
-          <p className="text-sm text-gray-400">Sin ejecuciones registradas.</p>
+          <p className="text-sm text-slate-400">Sin ejecuciones registradas.</p>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="text-left text-gray-500 border-b">
-                  <th className="pb-2">Fecha consulta</th>
-                  <th className="pb-2">Almacén</th>
-                  <th className="pb-2">Recibidas</th>
-                  <th className="pb-2">Insertadas</th>
-                  <th className="pb-2">Errores</th>
-                  <th className="pb-2">Mensaje</th>
-                  <th className="pb-2">Finalizado</th>
+          <div className="overflow-x-auto rounded-md border border-slate-700">
+            <table className="w-full text-sm text-slate-200">
+              <thead className="bg-slate-900/70">
+                <tr className="text-left text-xs uppercase tracking-wide text-amber-200/70">
+                  <th className="px-4 py-3">Fecha consulta</th>
+                  <th className="px-4 py-3">Almacén</th>
+                  <th className="px-4 py-3">Recibidas</th>
+                  <th className="px-4 py-3">Insertadas</th>
+                  <th className="px-4 py-3">Errores</th>
+                  <th className="px-4 py-3">Mensaje</th>
+                  <th className="px-4 py-3">Finalizado</th>
                 </tr>
               </thead>
               <tbody>
-                {logs.map((log: any) => (
-                  <tr key={log.id} className="border-b last:border-0">
-                    <td className="py-2">{log.fecha_consulta}</td>
-                    <td className="py-2">{log.almacen === 0 ? 'Todos' : `Almacén ${String(log.almacen).padStart(2, '0')}`}</td>
-                    <td className="py-2">{log.filas_recibidas}</td>
-                    <td className="py-2">{log.filas_insertadas}</td>
-                    <td className="py-2 text-red-500">{log.filas_error || '—'}</td>
-                    <td className="py-2 max-w-xs truncate text-gray-600">{log.mensaje || '—'}</td>
-                    <td className="py-2 text-gray-400">
+                {logs.map(log => (
+                  <tr key={log.id} className="border-t border-slate-700">
+                    <td className="px-4 py-3">{log.fecha_consulta}</td>
+                    <td className="px-4 py-3">
+                      {log.almacen === 0 ? 'Todos' : `Almacén ${String(log.almacen).padStart(2, '0')}`}
+                    </td>
+                    <td className="px-4 py-3">{log.filas_recibidas}</td>
+                    <td className="px-4 py-3">{log.filas_insertadas}</td>
+                    <td className="px-4 py-3 text-red-300">{log.filas_error || '—'}</td>
+                    <td className="max-w-xs truncate px-4 py-3 text-slate-300">{log.mensaje || '—'}</td>
+                    <td className="px-4 py-3 text-slate-400">
                       {log.finalizado_en ? new Date(log.finalizado_en).toLocaleString('es-CO') : '—'}
                     </td>
                   </tr>
@@ -177,297 +489,79 @@ function EtlPanel() {
         )}
       </Card>
     </div>
-  );
+  )
 }
-
-// ── Página principal ───────────────────────────────────────────────────────────
 
 export default function Settings() {
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 text-slate-100">
       <div>
-        <h1 className="text-3xl">Configuración</h1>
-        <p className="text-gray-500 mt-1">Ajustes del sistema y preferencias</p>
+        <h1 className="text-3xl font-semibold text-slate-100">Configuración</h1>
+        <p className="mt-1 text-amber-200/70">Ajustes del sistema y preferencias funcionales</p>
       </div>
 
-      <Tabs defaultValue="users" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-5">
-          <TabsTrigger value="users" className="flex items-center gap-2">
-            <User className="w-4 h-4" />
+      <Tabs defaultValue="detection" className="space-y-6">
+        <TabsList className="grid w-full grid-cols-5 border border-amber-500/20 bg-slate-800/80">
+          <TabsTrigger value="users" className="flex items-center gap-2 data-[state=active]:bg-slate-700 data-[state=active]:text-amber-200">
+            <User className="h-4 w-4" />
             Usuarios
           </TabsTrigger>
-          <TabsTrigger value="detection" className="flex items-center gap-2">
-            <Shield className="w-4 h-4" />
+          <TabsTrigger value="detection" className="flex items-center gap-2 data-[state=active]:bg-slate-700 data-[state=active]:text-amber-200">
+            <Shield className="h-4 w-4" />
             Detección
           </TabsTrigger>
-          <TabsTrigger value="notifications" className="flex items-center gap-2">
-            <Bell className="w-4 h-4" />
+          <TabsTrigger value="notifications" className="flex items-center gap-2 data-[state=active]:bg-slate-700 data-[state=active]:text-amber-200">
+            <Bell className="h-4 w-4" />
             Notificaciones
           </TabsTrigger>
-          <TabsTrigger value="system" className="flex items-center gap-2">
-            <SettingsIcon className="w-4 h-4" />
+          <TabsTrigger value="system" className="flex items-center gap-2 data-[state=active]:bg-slate-700 data-[state=active]:text-amber-200">
+            <SettingsIcon className="h-4 w-4" />
             Sistema
           </TabsTrigger>
-          <TabsTrigger value="datos" className="flex items-center gap-2">
-            <Database className="w-4 h-4" />
+          <TabsTrigger value="datos" className="flex items-center gap-2 data-[state=active]:bg-slate-700 data-[state=active]:text-amber-200">
+            <Database className="h-4 w-4" />
             Datos
           </TabsTrigger>
         </TabsList>
 
-        {/* Users Tab */}
         <TabsContent value="users">
-          <Card className="p-6">
-            <h3 className="text-lg font-medium mb-4">Gestión de Usuarios</h3>
-            <div className="space-y-6">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="userName">Nombre Completo</Label>
-                  <Input id="userName" placeholder="Juan Pérez" />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="userEmail">Correo Electrónico</Label>
-                  <Input id="userEmail" type="email" placeholder="juan@ejemplo.com" />
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="userRole">Rol</Label>
-                  <Select defaultValue="analyst">
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="admin">Administrador</SelectItem>
-                      <SelectItem value="analyst">Analista</SelectItem>
-                      <SelectItem value="viewer">Visualizador</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="userStatus">Estado</Label>
-                  <Select defaultValue="active">
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="active">Activo</SelectItem>
-                      <SelectItem value="inactive">Inactivo</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-              <Button className="w-full">Agregar Usuario</Button>
-
-              <div className="border-t pt-6">
-                <h4 className="font-medium mb-3">Usuarios Actuales</h4>
-                <div className="space-y-3">
-                  {[
-                    { name: 'Admin User', email: 'admin@joz.com', role: 'Administrador' },
-                    { name: 'Ana García', email: 'ana@joz.com', role: 'Analista' },
-                    { name: 'Carlos López', email: 'carlos@joz.com', role: 'Visualizador' },
-                  ].map((user, idx) => (
-                    <div key={idx} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                      <div>
-                        <p className="font-medium">{user.name}</p>
-                        <p className="text-sm text-gray-500">{user.email}</p>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm text-gray-600">{user.role}</span>
-                        <Button variant="outline" size="sm">Editar</Button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </Card>
+          <DisabledSection
+            title="Gestión de Usuarios"
+            badgeText="Gestionado por Hub"
+            message="La administración de accesos no se gestiona en JOZ."
+            detail="Esta sección queda deshabilitada para evitar operaciones sin persistencia local. Las altas/bajas/roles deben realizarse desde el Hub central."
+            icon={<User className="h-4 w-4" />}
+          />
         </TabsContent>
 
-        {/* Detection Rules Tab */}
         <TabsContent value="detection">
-          <Card className="p-6">
-            <h3 className="text-lg font-medium mb-4">Reglas de Detección de Anomalías</h3>
-            <div className="space-y-6">
-              <div className="space-y-4">
-                <div className="flex items-center justify-between p-4 border rounded-lg">
-                  <div>
-                    <p className="font-medium">Transacciones de alto valor</p>
-                    <p className="text-sm text-gray-500">Detectar transacciones superiores al umbral</p>
-                  </div>
-                  <Switch defaultChecked />
-                </div>
-                <div className="flex items-center justify-between p-4 border rounded-lg">
-                  <div>
-                    <p className="font-medium">Múltiples transacciones</p>
-                    <p className="text-sm text-gray-500">Alertar cuando hay múltiples transacciones en corto tiempo</p>
-                  </div>
-                  <Switch defaultChecked />
-                </div>
-                <div className="flex items-center justify-between p-4 border rounded-lg">
-                  <div>
-                    <p className="font-medium">Horario inusual</p>
-                    <p className="text-sm text-gray-500">Detectar actividad fuera del horario laboral</p>
-                  </div>
-                  <Switch defaultChecked />
-                </div>
-                <div className="flex items-center justify-between p-4 border rounded-lg">
-                  <div>
-                    <p className="font-medium">Descuentos excesivos</p>
-                    <p className="text-sm text-gray-500">Alertar cuando se aplican descuentos superiores al límite</p>
-                  </div>
-                  <Switch />
-                </div>
-              </div>
-
-              <div className="border-t pt-6">
-                <h4 className="font-medium mb-3">Umbrales</h4>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="amountThreshold">Monto máximo (COP)</Label>
-                    <Input id="amountThreshold" type="number" defaultValue="10000000" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="discountThreshold">Descuento máximo (%)</Label>
-                    <Input id="discountThreshold" type="number" defaultValue="50" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="transactionCount">Transacciones por hora</Label>
-                    <Input id="transactionCount" type="number" defaultValue="20" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="riskScore">Puntuación de riesgo mínima</Label>
-                    <Input id="riskScore" type="number" defaultValue="75" />
-                  </div>
-                </div>
-              </div>
-
-              <Button className="w-full">Guardar Configuración</Button>
-            </div>
-          </Card>
+          <DetectionPanel />
         </TabsContent>
 
-        {/* Notifications Tab */}
         <TabsContent value="notifications">
-          <Card className="p-6">
-            <h3 className="text-lg font-medium mb-4">Configuración de Notificaciones</h3>
-            <div className="space-y-6">
-              <div className="space-y-4">
-                <div className="flex items-center justify-between p-4 border rounded-lg">
-                  <div>
-                    <p className="font-medium">Notificaciones por email</p>
-                    <p className="text-sm text-gray-500">Recibir alertas por correo electrónico</p>
-                  </div>
-                  <Switch defaultChecked />
-                </div>
-                <div className="flex items-center justify-between p-4 border rounded-lg">
-                  <div>
-                    <p className="font-medium">Alertas en tiempo real</p>
-                    <p className="text-sm text-gray-500">Notificaciones push instantáneas</p>
-                  </div>
-                  <Switch defaultChecked />
-                </div>
-                <div className="flex items-center justify-between p-4 border rounded-lg">
-                  <div>
-                    <p className="font-medium">Resumen diario</p>
-                    <p className="text-sm text-gray-500">Recibir un resumen diario de actividad</p>
-                  </div>
-                  <Switch />
-                </div>
-                <div className="flex items-center justify-between p-4 border rounded-lg">
-                  <div>
-                    <p className="font-medium">Alertas de riesgo alto</p>
-                    <p className="text-sm text-gray-500">Solo notificar anomalías de riesgo alto</p>
-                  </div>
-                  <Switch defaultChecked />
-                </div>
-              </div>
-
-              <div className="border-t pt-6">
-                <h4 className="font-medium mb-3">Contactos de Notificación</h4>
-                <div className="space-y-2">
-                  <Label htmlFor="primaryEmail">Email principal</Label>
-                  <Input id="primaryEmail" type="email" defaultValue="admin@joz.com" />
-                </div>
-                <div className="space-y-2 mt-4">
-                  <Label htmlFor="secondaryEmail">Email secundario</Label>
-                  <Input id="secondaryEmail" type="email" placeholder="opcional@joz.com" />
-                </div>
-              </div>
-
-              <Button className="w-full">Guardar Preferencias</Button>
-            </div>
-          </Card>
+          <DisabledSection
+            title="Configuración de Notificaciones"
+            badgeText="Próximamente"
+            message="Canales de notificación aún no implementados en backend."
+            detail="No se muestran switches ni formularios editables para evitar expectativa de envío real de email/push/webhook en esta versión."
+            icon={<Bell className="h-4 w-4" />}
+          />
         </TabsContent>
 
-        {/* System Tab */}
         <TabsContent value="system">
-          <Card className="p-6">
-            <h3 className="text-lg font-medium mb-4">Preferencias del Sistema</h3>
-            <div className="space-y-6">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="timezone">Zona Horaria</Label>
-                  <Select defaultValue="america/bogota">
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="america/bogota">América/Bogotá</SelectItem>
-                      <SelectItem value="america/mexico">América/Ciudad de México</SelectItem>
-                      <SelectItem value="america/ny">América/Nueva York</SelectItem>
-                      <SelectItem value="europe/madrid">Europa/Madrid</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="language">Idioma</Label>
-                  <Select defaultValue="es">
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="es">Español</SelectItem>
-                      <SelectItem value="en">English</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              <div className="border-t pt-6">
-                <h4 className="font-medium mb-3">Retención de Datos</h4>
-                <div className="space-y-2">
-                  <Label htmlFor="dataRetention">Tiempo de retención (días)</Label>
-                  <Input id="dataRetention" type="number" defaultValue="90" />
-                  <p className="text-sm text-gray-500">Los datos se eliminarán automáticamente después de este período</p>
-                </div>
-              </div>
-
-              <div className="border-t pt-6">
-                <h4 className="font-medium mb-3">Integración API</h4>
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="apiKey">API Key</Label>
-                    <Input id="apiKey" type="password" defaultValue="************************" />
-                  </div>
-                  <Button variant="outline">Regenerar API Key</Button>
-                </div>
-              </div>
-
-              <div className="border-t pt-6">
-                <h4 className="font-medium mb-3 text-red-600">Zona de Peligro</h4>
-                <Button variant="destructive" className="w-full">Restablecer Sistema</Button>
-              </div>
-
-              <Button className="w-full">Guardar Cambios</Button>
-            </div>
-          </Card>
+          <DisabledSection
+            title="Preferencias del Sistema"
+            badgeText="No habilitado"
+            message="Parámetros globales y acciones sensibles fuera de alcance en esta iteración."
+            detail="La acción destructiva de restablecimiento de sistema fue retirada del DOM hasta contar con backend seguro y confirmaciones de auditoría."
+            icon={<SettingsIcon className="h-4 w-4" />}
+          />
         </TabsContent>
 
-        {/* Datos / SuperEfectivo Tab */}
         <TabsContent value="datos">
           <EtlPanel />
         </TabsContent>
       </Tabs>
     </div>
-  );
+  )
 }

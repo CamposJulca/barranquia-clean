@@ -2,6 +2,7 @@ from django.urls import path
 from . import views
 
 urlpatterns = [
+    path('config/deteccion/',   views.config_deteccion,   name='joz-config-deteccion'),
     path('stats/',               views.stats,             name='joz-stats'),
     path('anomalias-por-dia/',   views.anomalias_por_dia, name='joz-anomalias'),
     path('alertas/',             views.alertas,           name='joz-alertas'),
