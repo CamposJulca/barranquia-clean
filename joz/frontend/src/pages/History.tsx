@@ -16,12 +16,12 @@ const categorizar = (descripcion: string) => {
 };
 
 const tipoColors: Record<string, string> = {
-  Empeño: 'bg-purple-100 text-purple-700',
-  Retiro: 'bg-orange-100 text-orange-700',
-  Abono: 'bg-blue-100 text-blue-700',
-  Apertura: 'bg-green-100 text-green-700',
-  Cierre: 'bg-gray-200 text-gray-700',
-  Otro: 'bg-gray-100 text-gray-700',
+  Empeño: 'bg-purple-500/20 text-purple-300 border border-purple-500/30',
+  Retiro: 'bg-orange-500/20 text-orange-300 border border-orange-500/30',
+  Abono: 'bg-blue-500/20 text-blue-300 border border-blue-500/30',
+  Apertura: 'bg-green-500/20 text-green-300 border border-green-500/30',
+  Cierre: 'bg-slate-600/40 text-slate-300 border border-slate-500/30',
+  Otro: 'bg-slate-700/40 text-slate-400 border border-slate-600/30',
 };
 
 const fmt = (n: number) =>
@@ -55,22 +55,23 @@ export default function History() {
   return (
     <div className="space-y-6">
 
-      <h1 className="text-3xl font-light">Historial</h1>
+      <h1 className="text-2xl font-bold text-white">Historial</h1>
 
-      <Card className="p-4 flex gap-3">
-        <Search className="w-4 h-4 text-gray-400" />
+      <Card className="bg-slate-900 border-amber-500/20 p-4 flex gap-3">
+        <Search className="w-4 h-4 text-amber-400" />
         <Input
           placeholder="Buscar..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
+          className="bg-slate-950 border-amber-500/30 text-amber-100 placeholder:text-amber-200/30"
         />
       </Card>
 
-      <Card>
+      <Card className="bg-slate-900 border-amber-500/20">
         <table className="w-full text-sm">
 
-          <thead className="bg-gray-50 border-b">
-            <tr>
+          <thead className="bg-slate-800 border-b border-slate-700">
+            <tr className="text-amber-200/60">
               <th>Ref</th>
               <th>Fecha</th>
               <th>Almacén</th>
@@ -83,9 +84,9 @@ export default function History() {
             </tr>
           </thead>
 
-          <tbody className="divide-y">
+          <tbody className="divide-y divide-slate-800">
             {historyData.map((r) => (
-              <tr key={r.id} className="hover:bg-gray-50">
+              <tr key={r.id} className="text-slate-300 hover:bg-slate-800/60 transition-colors">
 
                 <td>{r.referencia}</td>
                 <td>{r.date}</td>
@@ -106,12 +107,11 @@ export default function History() {
                 <td>{r.analista}</td>
 
                 {/* 🔥 COLOR VERDE */}
-                <td className="text-right text-green-700 font-medium">
+                <td className="text-right text-green-400 font-medium">
                   {r.entrada > 0 ? fmt(r.entrada) : '—'}
                 </td>
 
-                {/* 🔥 COLOR ROJO */}
-                <td className="text-right text-red-700 font-medium">
+                <td className="text-right text-red-400 font-medium">
                   {r.salida > 0 ? fmt(r.salida) : '—'}
                 </td>
 

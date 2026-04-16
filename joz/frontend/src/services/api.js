@@ -1,11 +1,8 @@
 import axios from 'axios'
 
-/*const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL,
-  timeout: Number(import.meta.env.VITE_API_TIMEOUT) || 15000,
-})*/
 const api = axios.create({
-  baseURL: "http://localhost:8003/api/joz",
+  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:8003/api/joz',
+  timeout: Number(import.meta.env.VITE_API_TIMEOUT) || 15000,
 })
 
 // 🔥 helper para normalizar respuestas del backend
@@ -45,6 +42,12 @@ export const getHistorial = async (params) => {
 export const getEtlStatus = async () => {
   const res = await api.get('/etl/status/')
   return unwrap(res)
+}
+
+// Retorna { data: [...], corriendo: bool } sin desempaquetar
+export const getEtlStatusFull = async () => {
+  const res = await api.get('/etl/status/')
+  return res.data  // { ok, data: [...], corriendo }
 }
 
 export const runEtl = async (params) => {

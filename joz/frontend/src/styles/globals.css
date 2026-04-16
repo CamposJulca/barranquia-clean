@@ -7,8 +7,16 @@
 ========================= */
 
 :root {
-  --background: #f8fafc;
-  --foreground: #020617;
+  --background: #0f172a;
+  --foreground: #e2e8f0;
+  --surface: #111827;
+  --surface-muted: #0f172a;
+  --surface-strong: #1f2937;
+  --border: #334155;
+  --muted: #94a3b8;
+  --accent: #f59e0b;
+  --accent-soft: #fde68a;
+  --text-secondary: #cbd5e1;
 }
 
 /* =========================
