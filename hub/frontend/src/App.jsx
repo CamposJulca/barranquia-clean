@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react'
 import { Routes, Route, useNavigate } from 'react-router-dom'
 import axios from 'axios'
 import Login from './Login'
-import ServiParamo from './ServiParamo'
 import './App.css'
 
 const SERVICES = [
@@ -28,7 +27,7 @@ const SERVICES = [
     description: 'Normalización de catálogo SKUs',
     icon: '🌿',
     color: '#51cf66',
-    path: '/serviparamo',
+    externalUrl: '/serviparamo/',
   },
 ]
 
@@ -36,9 +35,7 @@ function ServiceCard({ service }) {
   const navigate = useNavigate()
 
   const handleNavigation = () => {
-    if (service.path) {
-      navigate(service.path)
-    } else if (service.externalUrl) {
+    if (service.externalUrl) {
       window.location.href = service.externalUrl
     }
   }
@@ -138,7 +135,6 @@ function App() {
 
   return (
     <Routes>
-      <Route path="/serviparamo/*" element={<ServiParamo token={token} username={username} />} />
       <Route path="*" element={<Hub token={token} username={username} onLogout={handleLogout} />} />
     </Routes>
   )

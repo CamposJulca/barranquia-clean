@@ -12,7 +12,7 @@ SERVICES_DATA = [
         'description': 'Plataforma de gestión',
         'icon': '🤖',
         'color': '#6c63ff',
-        'path': '/avantika',
+        'path': '/avantika/',
         'active': True,
     },
     {
@@ -21,7 +21,7 @@ SERVICES_DATA = [
         'description': 'Sistema de análisis',
         'icon': '📊',
         'color': '#00d4ff',
-        'path': '/joz',
+        'path': '/joz/',
         'active': True,
     },
     {
@@ -30,7 +30,7 @@ SERVICES_DATA = [
         'description': 'Servicio de páramos',
         'icon': '🌿',
         'color': '#51cf66',
-        'path': '/serviparamo',
+        'path': '/serviparamo/',
         'active': True,
     },
 ]
