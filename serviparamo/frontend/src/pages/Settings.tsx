@@ -36,17 +36,37 @@ export default function Settings() {
   const [etlStatus, setEtlStatus] = useState<ETLLogEntry[]>([]);
   const [etlLoading, setEtlLoading] = useState(true);
   const [etlRunning, setEtlRunning] = useState(false);
+  const [etlStarting, setEtlStarting] = useState(false);
   const [etlMessage, setEtlMessage] = useState<string | null>(null);
 
   const loadETLStatus = async (silent = false) => {
     if (!silent) setEtlLoading(true);
     try {
       const res: ETLStatusData = await getETLStatus();
+      const wasRunning = etlRunning;
+      const isRunning = Boolean(res.corriendo);
       setEtlStatus(res.data ?? []);
-      setEtlRunning(Boolean(res.corriendo));
+      setEtlRunning(isRunning);
+      setEtlStarting(false);
+
+      // Mostrar resultado final solo cuando el polling detecta el fin del proceso.
+      if (silent && wasRunning && !isRunning) {
+        if ((res.resumen?.tablas_con_error ?? 0) > 0) {
+          setEtlMessage(
+            `Sincronización finalizada con ${res.resumen?.tablas_con_error ?? 0} tabla(s) con errores.`,
+          );
+        } else if (res.resumen) {
+          setEtlMessage(
+            `Sincronización completada. ${res.resumen.total_tablas} tabla(s) actualizadas.`,
+          );
+        } else {
+          setEtlMessage("Sincronización finalizada.");
+        }
+      }
     } catch {
       setEtlStatus([]);
       setEtlRunning(false);
+      setEtlStarting(false);
     } finally {
       if (!silent) setEtlLoading(false);
     }
@@ -62,6 +82,7 @@ export default function Settings() {
 
   const handleRunETL = async () => {
     setEtlRunning(true);
+    setEtlStarting(true);
     setEtlMessage(null);
     try {
       const res = await runETL();
@@ -74,6 +95,7 @@ export default function Settings() {
       } else {
         setEtlMessage("Error al iniciar el ETL. Revisa la conexión con el backend.");
         setEtlRunning(false);
+        setEtlStarting(false);
       }
     }
   };
@@ -118,7 +140,11 @@ export default function Settings() {
               className="shrink-0 bg-sp-blue hover:bg-sp-blue-hover text-white"
             >
               {etlRunning ? (
-                <><Loader className="w-4 h-4 mr-2 animate-spin" />Iniciando…</>
+                etlStarting ? (
+                  <><Loader className="w-4 h-4 mr-2 animate-spin" />Iniciando…</>
+                ) : (
+                  <><Loader className="w-4 h-4 mr-2 animate-spin" />En ejecución…</>
+                )
               ) : (
                 <><RefreshCw className="w-4 h-4 mr-2" />Sincronizar ERP</>
               )}
@@ -126,7 +152,11 @@ export default function Settings() {
           </div>
 
           {etlMessage && (
-            <div className="bg-sp-blue-light border border-sp-blue/20 rounded-lg p-3 text-sm text-sp-navy">
+            <div className={`rounded-lg p-3 text-sm ${
+              etlMessage.includes("error") || etlMessage.includes("Error")
+                ? "bg-red-50 border border-red-200 text-red-700"
+                : "bg-sp-blue-light border border-sp-blue/20 text-sp-navy"
+            }`}>
               {etlMessage}
             </div>
           )}
