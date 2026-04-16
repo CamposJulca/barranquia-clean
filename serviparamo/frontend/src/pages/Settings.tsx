@@ -22,6 +22,14 @@ interface ETLLogEntry {
 interface ETLStatusData {
   ok: boolean;
   data: ETLLogEntry[];
+  corriendo?: boolean;
+  resumen?: {
+    total_tablas: number;
+    tablas_con_error: number;
+    ultimo_inicio: string | null;
+    ultimo_fin: string | null;
+    ultimo_mensaje: string;
+  } | null;
 }
 
 export default function Settings() {
@@ -30,19 +38,27 @@ export default function Settings() {
   const [etlRunning, setEtlRunning] = useState(false);
   const [etlMessage, setEtlMessage] = useState<string | null>(null);
 
-  const loadETLStatus = async () => {
-    setEtlLoading(true);
+  const loadETLStatus = async (silent = false) => {
+    if (!silent) setEtlLoading(true);
     try {
       const res: ETLStatusData = await getETLStatus();
       setEtlStatus(res.data ?? []);
+      setEtlRunning(Boolean(res.corriendo));
     } catch {
       setEtlStatus([]);
+      setEtlRunning(false);
     } finally {
-      setEtlLoading(false);
+      if (!silent) setEtlLoading(false);
     }
   };
 
   useEffect(() => { loadETLStatus(); }, []);
+
+  useEffect(() => {
+    if (!etlRunning) return;
+    const interval = setInterval(() => loadETLStatus(true), 4000);
+    return () => clearInterval(interval);
+  }, [etlRunning]);
 
   const handleRunETL = async () => {
     setEtlRunning(true);
@@ -50,12 +66,15 @@ export default function Settings() {
     try {
       const res = await runETL();
       setEtlMessage(res.mensaje ?? "ETL iniciado en segundo plano.");
-      // Refresca el estado después de 5s
-      setTimeout(() => loadETLStatus(), 5000);
-    } catch {
-      setEtlMessage("Error al iniciar el ETL. Revisa la conexión con el backend.");
-    } finally {
-      setEtlRunning(false);
+      await loadETLStatus();
+    } catch (err: any) {
+      if (err?.response?.status === 409) {
+        setEtlMessage(err?.response?.data?.error ?? "El ETL ya está en ejecución.");
+        await loadETLStatus();
+      } else {
+        setEtlMessage("Error al iniciar el ETL. Revisa la conexión con el backend.");
+        setEtlRunning(false);
+      }
     }
   };
 

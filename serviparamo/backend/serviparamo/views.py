@@ -197,8 +197,7 @@ def pedido_detail(request, pedido):
 
 @api_view(['GET'])
 def etl_status(request):
-    """Último registro del ETL por tabla."""
-    from django.db.models import Max
+    """Último registro del ETL por tabla + estado de ejecución."""
     tablas = ETLLog.objects.values('tabla_destino').distinct()
     resultado = []
     for t in tablas:
@@ -210,7 +209,22 @@ def etl_status(request):
         )
         if ultimo:
             resultado.append(ETLLogSerializer(ultimo).data)
-    return Response(_ok(resultado))
+
+    ultimo_global = ETLLog.objects.order_by('-iniciado_en').first()
+    resumen = None
+    if ultimo_global:
+        resumen = {
+            'total_tablas': len(resultado),
+            'tablas_con_error': sum(1 for r in resultado if (r.get('filas_error') or 0) > 0),
+            'ultimo_inicio': ultimo_global.iniciado_en.isoformat() if ultimo_global.iniciado_en else None,
+            'ultimo_fin': ultimo_global.finalizado_en.isoformat() if ultimo_global.finalizado_en else None,
+            'ultimo_mensaje': ultimo_global.mensaje or '',
+        }
+
+    response_data = _ok(resultado)
+    response_data['corriendo'] = _etl_lock.locked()
+    response_data['resumen'] = resumen
+    return Response(response_data)
 
 
 _etl_lock = threading.Lock()
@@ -231,6 +245,7 @@ def etl_run(request):
             status=status.HTTP_409_CONFLICT,
         )
 
+    _etl_running = True
     tablas = request.data.get('tablas', None)
 
     def _run():
@@ -242,6 +257,7 @@ def etl_run(request):
             import logging
             logging.getLogger(__name__).error(f"ETL falló: {e}")
         finally:
+            _etl_running = False
             _etl_lock.release()
 
     thread = threading.Thread(target=_run, daemon=True)
