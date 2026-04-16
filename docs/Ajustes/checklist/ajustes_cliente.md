@@ -22,13 +22,13 @@ Documento extraído de: `docs/Ajustes/Documento Observaciones Joz Y Servipáramo
 - [x] Validar correcta visualización de datos según requerimiento del cliente.
 
 ### 1.3 Módulo: Alertas
-- [ ] Corregir lógica de filtrado:
-  - [ ] Revisar filtro por nivel (especialmente nivel “Alto”).
-  - [ ] Revisar filtro por almacén.
-  - [ ] Revisar bindings de filtros en frontend/backend.
-- [ ] Corregir funcionalidad del buscador.
-- [ ] No implementar descripciones ni ayudas visuales relacionadas con tipos de anomalía dentro del sistema.
-- [ ] Asegurar que el sistema solo muestre el tipo de anomalía como etiqueta, alineado con el documento externo.
+- [x] Corregir lógica de filtrado:
+  - [x] Revisar filtro por nivel (especialmente nivel “Alto”).
+  - [x] Revisar filtro por almacén.
+  - [x] Revisar bindings de filtros en frontend/backend.
+- [x] Corregir funcionalidad del buscador.
+- [x] No implementar descripciones ni ayudas visuales relacionadas con tipos de anomalía dentro del sistema.
+- [x] Asegurar que el sistema solo muestre el tipo de anomalía como etiqueta, alineado con el documento externo.
 
 ### 1.4 Módulo: Riesgos
 - [ ] Crear una vista de detalle para cada riesgo.
@@ -98,7 +98,7 @@ Documento extraído de: `docs/Ajustes/Documento Observaciones Joz Y Servipáramo
 
 ### Prioridad Alta
 - [ ] Corrección de visibilidad en JOZ (todos los módulos).
-- [ ] Corrección de filtros y buscador en Alertas.
+- [x] Corrección de filtros y buscador en Alertas.
 - [ ] Validación de lógica de negocio en Historial.
 - [ ] Sincronización de estado ETL en Servipáramo (Duplicados).
 
