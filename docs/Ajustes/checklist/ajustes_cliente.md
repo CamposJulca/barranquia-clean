@@ -91,11 +91,11 @@ Documento extraído de: `docs/Ajustes/Documento Observaciones Joz Y Servipáramo
 - [ ] Ninguna acción requerida.
 
 ### 2.8 Módulo: Configuraciones
-- [ ] Definir qué información y opciones estarán disponibles:
-  - [ ] Parámetros del sistema.
-  - [ ] Configuración de ETL.
-  - [ ] Preferencias de usuario.
-- [ ] Diseñar estructura clara antes de implementación.
+- [x] Definir qué información y opciones estarán disponibles:
+  - [x] Parámetros del sistema.
+  - [x] Configuración de ETL.
+  - [x] Preferencias de usuario.
+- [x] Diseñar estructura clara antes de implementación.
 
 ## 3. Conclusión General
 
@@ -111,7 +111,7 @@ Documento extraído de: `docs/Ajustes/Documento Observaciones Joz Y Servipáramo
 
 ### Prioridad Baja
 - [x] Definición funcional de módulo de Configuración en JOZ.
-- [ ] Definición funcional de módulo de Configuración en Servipáramo.
+- [x] Definición funcional de módulo de Configuración en Servipáramo.
 - [ ] Mejoras estructurales futuras.
 
 > **Nota:** Validar cada ajuste con el cliente antes de despliegue a producción.
