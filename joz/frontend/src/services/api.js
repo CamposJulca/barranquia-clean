@@ -34,6 +34,11 @@ export const getRiesgos = async () => {
   return unwrap(res)
 }
 
+export const getRiesgoDetalle = async (id) => {
+  const res = await api.get(`/riesgos/${id}/`)
+  return unwrap(res)
+}
+
 export const getHistorial = async (params) => {
   const res = await api.get('/historial/', { params })
   return unwrap(res)

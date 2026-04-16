@@ -31,12 +31,12 @@ Documento extraído de: `docs/Ajustes/Documento Observaciones Joz Y Servipáramo
 - [x] Asegurar que el sistema solo muestre el tipo de anomalía como etiqueta, alineado con el documento externo.
 
 ### 1.4 Módulo: Riesgos
-- [ ] Crear una vista de detalle para cada riesgo.
-- [ ] Incluir en la vista de detalle:
-  - [ ] Motivo del riesgo.
-  - [ ] Datos asociados.
-  - [ ] Contexto de la anomalía.
-- [ ] Evaluar implementación de detalle mediante modal, vista expandible o navegación a detalle.
+- [x] Crear una vista de detalle para cada riesgo.
+- [x] Incluir en la vista de detalle:
+  - [x] Motivo del riesgo.
+  - [x] Datos asociados.
+  - [x] Contexto de la anomalía.
+- [x] Evaluar implementación de detalle mediante modal, vista expandible o navegación a detalle.
 
 ### 1.5 Módulo: Historial
 - [ ] Revisar la lógica implementada del historial.
@@ -103,7 +103,7 @@ Documento extraído de: `docs/Ajustes/Documento Observaciones Joz Y Servipáramo
 - [ ] Sincronización de estado ETL en Servipáramo (Duplicados).
 
 ### Prioridad Media
-- [ ] Implementación de vistas de detalle en Riesgos.
+- [x] Implementación de vistas de detalle en Riesgos.
 - [ ] Ajustes en Búsqueda Semántica.
 
 ### Prioridad Baja

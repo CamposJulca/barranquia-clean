@@ -7,6 +7,7 @@ urlpatterns = [
     path('alertas/',             views.alertas,           name='joz-alertas'),
     path('alertas/<int:pk>/',    views.alertas,           name='joz-alerta-detail'),
     path('riesgos/',             views.riesgos,           name='joz-riesgos'),
+    path('riesgos/<int:pk>/',    views.riesgo_detalle,    name='joz-riesgo-detalle'),
     path('historial/',           views.historial,         name='joz-historial'),
     path('etl/run/',             views.etl_run,           name='joz-etl-run'),
     path('etl/status/',          views.etl_status,        name='joz-etl-status'),

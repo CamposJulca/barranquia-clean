@@ -310,6 +310,48 @@ def riesgos(request):
 
 
 @api_view(['GET'])
+def riesgo_detalle(request, pk):
+    """
+    Detalle de riesgo operativo.
+    Formato: { motivo_riesgo, datos_asociados, contexto_anomalia }
+    """
+    try:
+        riesgo = Riesgo.objects.get(pk=pk)
+    except Riesgo.DoesNotExist:
+        return _err('Riesgo no encontrado.', status.HTTP_404_NOT_FOUND)
+
+    nivel_a_severidad = {
+        'alto': ['alta', 'critica'],
+        'medio': ['media'],
+        'bajo': ['baja'],
+    }
+    severidades = nivel_a_severidad.get(riesgo.nivel, [])
+    alertas_qs = Alerta.objects.filter(severidad__in=severidades)
+
+    return Response(_ok({
+        'id': riesgo.id,
+        'motivo_riesgo': {
+            'categoria': riesgo.categoria,
+            'descripcion': riesgo.descripcion or '—',
+        },
+        'datos_asociados': {
+            'nivel': riesgo.nivel,
+            'nivel_riesgo': NIVEL_MAP.get(riesgo.nivel, 'low'),
+            'probabilidad': riesgo.probabilidad,
+            'impacto_estimado': float(riesgo.impacto_estimado) if riesgo.impacto_estimado else None,
+            'calculado_en': riesgo.calculado_en.isoformat(),
+        },
+        'contexto_anomalia': {
+            'total_alertas_nivel': alertas_qs.count(),
+            'alertas_abiertas': alertas_qs.filter(estado='abierta').count(),
+            'tipos_frecuentes': list(
+                alertas_qs.values_list('tipo', flat=True).distinct()[:5]
+            ),
+        },
+    }))
+
+
+@api_view(['GET'])
 def historial(request):
     """
     Historial de transacciones de SuperEfectivo.
