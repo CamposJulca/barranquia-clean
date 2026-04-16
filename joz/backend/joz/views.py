@@ -184,19 +184,43 @@ def alertas(request, pk=None):
         return Response(_ok({'id': alerta.id, 'estado': alerta.estado}))
 
     qs = Alerta.objects.select_related('transaccion').all()
-    severidad    = request.GET.get('severidad', '').strip()
-    estado_filter= request.GET.get('estado', '').strip()
-    nivel_riesgo = request.GET.get('nivel_riesgo', '').strip()
+    severidad = request.GET.get('severidad', '').strip()
+    estado_filter = request.GET.get('estado', '').strip()
+    nivel_riesgo = request.GET.get('nivel_riesgo', '').strip().lower()
+    almacen_filter = request.GET.get('almacen', '').strip() or request.GET.get('tienda', '').strip()
+    q = request.GET.get('q', '').strip()
 
     if severidad:
         qs = qs.filter(severidad=severidad)
     if estado_filter:
         qs = qs.filter(estado=estado_filter)
     if nivel_riesgo:
-        sev_inverso = {v: k for k, v in RIESGO_MAP.items()}
-        sev = sev_inverso.get(nivel_riesgo)
-        if sev:
-            qs = qs.filter(severidad=sev)
+        severidad_por_nivel = {
+            'low': ['baja'],
+            'medium': ['media'],
+            'high': ['alta', 'critica'],
+            'bajo': ['baja'],
+            'medio': ['media'],
+            'alto': ['alta', 'critica'],
+        }
+        severidades = severidad_por_nivel.get(nivel_riesgo)
+        if severidades:
+            qs = qs.filter(severidad__in=severidades)
+
+    if almacen_filter:
+        # Permite valores como "12" o etiquetas como "ALMACEN 12".
+        digits = ''.join(ch for ch in almacen_filter if ch.isdigit())
+        normalized = digits or almacen_filter
+        try:
+            qs = qs.filter(transaccion__almacen=int(normalized))
+        except ValueError:
+            qs = qs.none()
+
+    if q:
+        qs = qs.filter(
+            Q(tipo__icontains=q) |
+            Q(descripcion__icontains=q)
+        )
 
     page      = max(1, int(request.GET.get('page', 1)))
     page_size = min(int(request.GET.get('page_size', 50)), 200)
@@ -211,6 +235,7 @@ def alertas(request, pk=None):
             'id':          a.id,
             'date':        a.generado_en.date().isoformat(),
             'store':       _nombre_almacen(tx.almacen) if tx else '—',
+            'almacen_codigo': tx.almacen if tx else None,
             'anomalyType': a.tipo,
             'amount':      float(tx.monto) if tx else 0,
             'riskLevel':   RIESGO_MAP.get(a.severidad, 'low'),
