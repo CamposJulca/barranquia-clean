@@ -39,10 +39,13 @@ Documento extraído de: `docs/Ajustes/Documento Observaciones Joz Y Servipáramo
 - [x] Evaluar implementación de detalle mediante modal, vista expandible o navegación a detalle.
 
 ### 1.5 Módulo: Historial
-- [ ] Revisar la lógica implementada del historial.
-- [ ] Validar la lógica contra los criterios acordados con el cliente.
-- [ ] Ajustar reglas de registro en historial.
-- [ ] Ajustar la validación de datos de prueba vs datos reales.
+- [x] Revisar la lógica implementada del historial.
+- [x] Validar la lógica contra los criterios acordados con el cliente.
+- [x] Ajustar reglas de registro en historial.
+- [x] Ajustar la validación de datos de prueba vs datos reales.
+- [x] Implementar filtro de origen (`Todos / Solo reales / Solo prueba`) en frontend y backend.
+- [x] Implementar debounce del buscador (`300ms`) para evitar saturación del backend.
+- [x] Implementar paginación (`count/page/page_size`) y estados UX (`loading/error/vacío`).
 
 ### 1.6 Módulo: ETL
 - [ ] Ninguna acción requerida.
@@ -99,7 +102,7 @@ Documento extraído de: `docs/Ajustes/Documento Observaciones Joz Y Servipáramo
 ### Prioridad Alta
 - [ ] Corrección de visibilidad en JOZ (todos los módulos).
 - [x] Corrección de filtros y buscador en Alertas.
-- [ ] Validación de lógica de negocio en Historial.
+- [x] Validación de lógica de negocio en Historial.
 - [ ] Sincronización de estado ETL en Servipáramo (Duplicados).
 
 ### Prioridad Media
