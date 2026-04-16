@@ -11,5 +11,9 @@ urlpatterns = [
 
 # Catch-all: serve React frontend for all non-API routes
 urlpatterns += [
-    re_path(r'^(?!api/).*$', TemplateView.as_view(template_name='index.html')),
+    # Evita interceptar assets estáticos/favicons como HTML.
+    re_path(
+        r'^(?!api/|admin/|static/|assets/|favicon\.ico$|favicon\.svg$).*$',
+        TemplateView.as_view(template_name='index.html')
+    ),
 ]

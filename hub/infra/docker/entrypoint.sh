@@ -25,6 +25,17 @@ do
 done
 echo "PostgreSQL listo."
 
+# ── Frontend Hub (index/assets para TemplateView + WhiteNoise) ────────────────
+echo "Preparando assets del frontend Hub..."
+mkdir -p /app/frontend-dist
+if [ -f /app/staticfiles/frontend/index.html ]; then
+    # Se copia antes de collectstatic --clear para preservar el build del Hub.
+    rm -rf /app/frontend-dist/*
+    cp -r /app/staticfiles/frontend/. /app/frontend-dist/
+else
+    echo "  Aviso: no se encontró /app/staticfiles/frontend/index.html en la imagen."
+fi
+
 # ── Migraciones ───────────────────────────────────────────────────────────────
 echo "Ejecutando migraciones..."
 python manage.py migrate --noinput
