@@ -1,6 +1,7 @@
 import re
 import time
 import threading
+import logging
 
 from django.db import connection
 from django.db.models import Count, Q
@@ -28,6 +29,10 @@ from .serializers import (
 _PAGE_SIZE_DEFAULT = 50
 _PAGE_SIZE_MAX = 500
 
+_SEMANTIC_MODEL_NAME = 'all-MiniLM-L6-v2'
+_semantic_model = None
+_semantic_model_lock = threading.Lock()
+
 
 def _paginar(qs, request):
     page = max(1, int(request.GET.get('page', 1)))
@@ -50,6 +55,17 @@ def _ok(data, count=None, page=None, page_size=None):
 
 def _err(msg, code=status.HTTP_400_BAD_REQUEST):
     return Response({'ok': False, 'error': msg}, status=code)
+
+
+def _get_semantic_model():
+    """Carga lazy y thread-safe del modelo semántico."""
+    global _semantic_model
+    if _semantic_model is None:
+        with _semantic_model_lock:
+            if _semantic_model is None:
+                from sentence_transformers import SentenceTransformer
+                _semantic_model = SentenceTransformer(_SEMANTIC_MODEL_NAME)
+    return _semantic_model
 
 
 # ── SKUs ─────────────────────────────────────────────────────────────────────
@@ -250,12 +266,29 @@ def etl_run(request):
 
     def _run():
         global _etl_running
+        logger = logging.getLogger(__name__)
         try:
-            from serviparamo.etl import run
-            run(tablas=tablas)
+            from serviparamo.etl import run as run_etl
+            run_etl(tablas=tablas)
+
+            # Opción A: indexación automática tras ETL de catálogo.
+            should_index = False
+            if tablas is None:
+                should_index = True
+            elif isinstance(tablas, (list, tuple, set)):
+                should_index = 'CatalogoSKU' in tablas
+            else:
+                should_index = str(tablas) == 'CatalogoSKU'
+
+            if should_index:
+                try:
+                    from serviparamo.embeddings import run as run_embeddings
+                    run_embeddings(solo_faltantes=True)
+                except Exception as emb_exc:
+                    # No abortar el ETL si falla la indexación semántica.
+                    logger.error(f"Indexación semántica falló tras ETL: {emb_exc}")
         except Exception as e:
-            import logging
-            logging.getLogger(__name__).error(f"ETL falló: {e}")
+            logger.error(f"ETL falló: {e}")
         finally:
             _etl_running = False
             _etl_lock.release()
@@ -273,6 +306,29 @@ def etl_run(request):
 # ── Búsqueda semántica ────────────────────────────────────────────────────────
 
 @api_view(['GET'])
+def buscar_status(request):
+    """Estado operativo de búsqueda semántica."""
+    total_items = CatalogoSKU.objects.count()
+    con_embedding = CatalogoEmbedding.objects.count()
+    pct_embedding = round(con_embedding / total_items * 100, 1) if total_items else 0
+
+    try:
+        _get_semantic_model()
+        motor_disponible = True
+    except Exception:
+        motor_disponible = False
+
+    return Response(_ok({
+        'total_items': total_items,
+        'con_embedding': con_embedding,
+        'pct_embedding': pct_embedding,
+        'etl_corriendo': _etl_lock.locked(),
+        'motor_disponible': motor_disponible,
+        'index_ready': con_embedding > 0,
+    }))
+
+
+@api_view(['GET'])
 def buscar(request):
     """Búsqueda semántica por texto libre usando embeddings."""
     q = request.GET.get('q', '').strip()
@@ -281,24 +337,26 @@ def buscar(request):
     if not q:
         return _err('Parámetro q requerido.')
 
+    total_embeddings = CatalogoEmbedding.objects.count()
+    logger = logging.getLogger(__name__)
+
     try:
-        from sentence_transformers import SentenceTransformer
         import numpy as np
 
-        modelo = SentenceTransformer('all-MiniLM-L6-v2')
+        if total_embeddings == 0:
+            raise RuntimeError('Sin embeddings disponibles')
+
+        modelo = _get_semantic_model()
         vector_query = modelo.encode([q], normalize_embeddings=True)[0]
 
-        total_embeddings = CatalogoEmbedding.objects.count()
-        if total_embeddings > 10000:
-            embeddings_qs = CatalogoEmbedding.objects.select_related('sku').all()[:5000]
-        else:
-            embeddings_qs = CatalogoEmbedding.objects.select_related('sku').all()
-
+        embeddings_qs = CatalogoEmbedding.objects.select_related('sku').all()
         resultados = []
+        embeddings_evaluados = 0
         for emb in embeddings_qs.iterator(chunk_size=2000):
             v = np.array(emb.vector, dtype=np.float32)
             sim = float(np.dot(vector_query, v))
             resultados.append((sim, emb.sku))
+            embeddings_evaluados += 1
 
         resultados.sort(key=lambda x: x[0], reverse=True)
         data = []
@@ -307,14 +365,24 @@ def buscar(request):
             row['similitud'] = round(sim, 4)
             data.append(row)
 
-        return Response(_ok(data, count=len(data)))
+        response_data = _ok(data, count=len(data))
+        response_data['motor'] = 'semantic'
+        response_data['embeddings_evaluados'] = embeddings_evaluados
+        response_data['total_embeddings'] = total_embeddings
+        return Response(response_data)
 
-    except ImportError:
+    except Exception as exc:
+        logger.warning(f"Búsqueda semántica en fallback textual: {exc}")
         qs = CatalogoSKU.objects.filter(
             Q(nombre__icontains=q) | Q(nombre1__icontains=q) |
             Q(familia__icontains=q) | Q(codigo__icontains=q)
         )[:limite]
-        return Response(_ok(SKUResumenSerializer(qs, many=True).data))
+        data = SKUResumenSerializer(qs, many=True).data
+        response_data = _ok(data, count=len(data))
+        response_data['motor'] = 'fallback_texto'
+        response_data['embeddings_evaluados'] = 0
+        response_data['total_embeddings'] = total_embeddings
+        return Response(response_data)
 
 
 # ── Duplicados y aprobaciones ─────────────────────────────────────────────────

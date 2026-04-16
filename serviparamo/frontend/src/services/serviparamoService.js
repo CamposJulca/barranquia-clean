@@ -29,8 +29,19 @@ export const getSKUDetail = async (codigo) => {
 
 export const buscarSKUs = async (query, limit = 20) => {
   const res = await api.get('/api/serviparamo/buscar/', { params: { q: query, limit } })
-  const body = unwrap(res)
-  return Array.isArray(body) ? body : (body?.data ?? [])
+  const body = unwrap(res) ?? {}
+  const results = Array.isArray(body?.data) ? body.data : (Array.isArray(body) ? body : [])
+  return {
+    results,
+    motor: body?.motor ?? 'fallback_texto',
+    embeddings_evaluados: Number(body?.embeddings_evaluados ?? 0),
+    total_embeddings: Number(body?.total_embeddings ?? 0),
+  }
+}
+
+export const getSemanticStatus = async () => {
+  const res = await api.get('/api/serviparamo/buscar/status/')
+  return unwrap(res)?.data ?? {}
 }
 
 // ── Catálogos ─────────────────────────────────────────────────────────────────

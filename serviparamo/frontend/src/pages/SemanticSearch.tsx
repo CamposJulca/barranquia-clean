@@ -1,10 +1,10 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Card, CardContent } from "../components/ui/card";
 import { Input } from "../components/ui/input";
 import { Button } from "../components/ui/button";
 import { Search, Sparkles, TrendingUp } from "lucide-react";
 import { Badge } from "../components/ui/badge";
-import { buscarSKUs } from "../services/serviparamoService";
+import { buscarSKUs, getSemanticStatus } from "../services/serviparamoService";
 
 interface BackendSKU {
   id: number;
@@ -20,11 +20,44 @@ interface SearchResult {
   similarity: number;
 }
 
+interface SemanticStatus {
+  total_items: number;
+  con_embedding: number;
+  pct_embedding: number;
+  etl_corriendo: boolean;
+  motor_disponible: boolean;
+  index_ready: boolean;
+}
+
+type SearchMotor = "semantic" | "fallback_texto" | null;
+
 export default function SemanticSearch() {
   const [searchQuery, setSearchQuery] = useState("");
   const [results, setResults] = useState<SearchResult[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [status, setStatus] = useState<SemanticStatus | null>(null);
+  const [searchMotor, setSearchMotor] = useState<SearchMotor>(null);
+
+  const loadStatus = async () => {
+    try {
+      const res = await getSemanticStatus();
+      setStatus({
+        total_items: Number(res?.total_items ?? 0),
+        con_embedding: Number(res?.con_embedding ?? 0),
+        pct_embedding: Number(res?.pct_embedding ?? 0),
+        etl_corriendo: Boolean(res?.etl_corriendo),
+        motor_disponible: Boolean(res?.motor_disponible),
+        index_ready: Boolean(res?.index_ready),
+      });
+    } catch {
+      setStatus(null);
+    }
+  };
+
+  useEffect(() => {
+    loadStatus();
+  }, []);
 
   const handleSearch = async () => {
     const query = searchQuery.trim();
@@ -35,23 +68,15 @@ export default function SemanticSearch() {
     setResults([]);
 
     try {
-      const res = await buscarSKUs(query);
+      const { results: backendResults, motor } = await buscarSKUs(query);
+      setSearchMotor(motor === "semantic" ? "semantic" : "fallback_texto");
 
-      console.log("RESPUESTA COMPLETA:", res);
-      const data = Array.isArray(res)
-        ? res
-        : Array.isArray(res?.data)
-        ? res.data
-        : [];
-
-      console.log("ARRAY FINAL:", data);
-
-      if (!data.length) {
+      if (!backendResults.length) {
         setResults([]);
         return;
       }
 
-      const mapped: SearchResult[] = data.map((item: BackendSKU) => ({
+      const mapped: SearchResult[] = backendResults.map((item: BackendSKU) => ({
         id: item.id,
         name: item.nombre || "Sin nombre",
         category: item.familia_normalizada || "Sin categoría",
@@ -61,8 +86,8 @@ export default function SemanticSearch() {
       setResults(mapped);
 
     } catch (err: any) {
-      console.error("Error en búsqueda:", err);
-      setError("No se pudo realizar la búsqueda");
+      setSearchMotor(null);
+      setError(err?.response?.data?.error ?? "No se pudo realizar la búsqueda");
     } finally {
       setIsSearching(false);
     }
@@ -83,6 +108,31 @@ export default function SemanticSearch() {
           Busque materiales usando lenguaje natural
         </p>
       </div>
+
+      {status && (
+        <Card className="border-sp-blue/20">
+          <CardContent className="p-4 space-y-2">
+            <div className="flex flex-wrap items-center gap-2">
+              <Badge variant="outline">
+                Índice: {status.con_embedding.toLocaleString()} / {status.total_items.toLocaleString()} ({status.pct_embedding}%)
+              </Badge>
+              <Badge className={status.motor_disponible ? "bg-emerald-100 text-emerald-800 border-emerald-200" : "bg-red-100 text-red-800 border-red-200"}>
+                {status.motor_disponible ? "Motor semántico disponible" : "Motor semántico no disponible"}
+              </Badge>
+              {status.etl_corriendo && (
+                <Badge className="bg-amber-100 text-amber-800 border-amber-200">
+                  ETL en ejecución
+                </Badge>
+              )}
+            </div>
+            {!status.index_ready && (
+              <p className="text-sm text-amber-700">
+                No hay embeddings disponibles. Ejecuta ETL y deja finalizar la indexación semántica.
+              </p>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {/* INPUT */}
       <Card className="shadow-md">
@@ -135,10 +185,17 @@ export default function SemanticSearch() {
         <div className="space-y-3">
           <div className="flex justify-between text-sm text-gray-600">
             <span>{results.length} resultados</span>
-            <span className="flex items-center gap-1">
-              <TrendingUp className="w-4 h-4" />
-              Ordenado por similitud
-            </span>
+            <div className="flex items-center gap-2">
+              <span className="flex items-center gap-1">
+                <TrendingUp className="w-4 h-4" />
+                Ordenado por similitud
+              </span>
+              {searchMotor && (
+                <Badge className={searchMotor === "semantic" ? "bg-sp-blue-light text-sp-navy border-sp-blue/20" : "bg-amber-100 text-amber-800 border-amber-200"}>
+                  {searchMotor === "semantic" ? "Motor: semántico" : "Motor: fallback textual"}
+                </Badge>
+              )}
+            </div>
           </div>
 
           {results.map((result) => (
