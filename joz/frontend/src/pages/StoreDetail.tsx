@@ -22,12 +22,12 @@ const categorizar = (descripcion: string): string => {
 }
 
 const tipoColors: Record<string, string> = {
-  Empeño: 'bg-purple-100 text-purple-700',
-  Retiro: 'bg-orange-100 text-orange-700',
-  Abono: 'bg-blue-100 text-blue-700',
-  Apertura: 'bg-green-100 text-green-700',
-  Cierre: 'bg-gray-200 text-gray-700',
-  Otro: 'bg-gray-100 text-gray-700',
+  Empeño: 'bg-purple-700 text-purple-100',
+  Retiro: 'bg-orange-700 text-orange-100',
+  Abono: 'bg-blue-700 text-blue-100',
+  Apertura: 'bg-green-700 text-green-100',
+  Cierre: 'bg-slate-700 text-slate-100',
+  Otro: 'bg-slate-600 text-slate-100',
 }
 
 const fmt = (n: number) =>
@@ -65,66 +65,72 @@ export default function StoreDetail() {
   return (
     <div className="space-y-6">
 
-      <h1 className="text-3xl font-light">Almacén: {name}</h1>
-
-      <div className="grid grid-cols-4 gap-4">
-        <StatCard title="Transacciones" value={data.length} icon={Activity} />
-        <StatCard title="Ingresos" value={fmt(totalEntrada)} icon={ArrowDownCircle} />
-        <StatCard title="Retiros" value={fmt(totalSalida)} icon={ArrowUpCircle} />
-        <StatCard title="Balance" value={fmt(totalEntrada - totalSalida)} icon={DollarSign} />
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <p className="text-sm uppercase tracking-[0.24em] text-slate-400">Detalle por almacén</p>
+          <h1 className="text-3xl font-semibold text-slate-100">Almacén: {name}</h1>
+        </div>
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <StatCard title="Transacciones" value={data.length} icon={Activity} />
+          <StatCard title="Ingresos" value={fmt(totalEntrada)} icon={ArrowDownCircle} />
+          <StatCard title="Retiros" value={fmt(totalSalida)} icon={ArrowUpCircle} />
+          <StatCard title="Balance" value={fmt(totalEntrada - totalSalida)} icon={DollarSign} />
+        </div>
       </div>
 
-      <Card>
-        <table className="w-full text-sm">
+      <Card className="bg-slate-950 border-slate-800 text-slate-100 p-6">
+        <div className="mb-6 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="text-sm text-slate-400">Resumen de transacciones por almacén</p>
+            <p className="text-base text-slate-200">Total de movimientos y estado financiero.</p>
+          </div>
+          <div className="rounded-full bg-slate-900 px-4 py-2 text-sm font-medium text-slate-100 border border-slate-800">
+            {data.length} registros
+          </div>
+        </div>
 
-          <thead className="bg-gray-50 border-b">
-            <tr>
-              <th>Ref</th>
-              <th>Fecha</th>
-              <th>Operación</th>
-              <th>Cliente</th>
-              <th>Descripción</th>
-              <th>Cajero</th>
-              <th>Entrada</th>
-              <th>Salida</th>
-            </tr>
-          </thead>
-
-          <tbody>
-            {data.map((r) => (
-              <tr key={r.id}>
-
-                <td>{r.referencia}</td>
-                <td>{r.date}</td>
-                <td>
-                  <Badge className={tipoColors[r.categoria]}>
-                    {r.categoria}
-                  </Badge>
-                </td>
-
-                <td>{r.cliente}</td>
-
-                <td className="text-xs">
-                  {r.descripcion}
-                </td>
-
-                <td>{r.analista}</td>
-
-                {/* 🔥 VERDE */}
-                <td className="text-green-700 font-medium">
-                  {fmt(r.entrada)}
-                </td>
-
-                {/* 🔥 ROJO */}
-                <td className="text-red-700 font-medium">
-                  {fmt(r.salida)}
-                </td>
-
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead className="bg-slate-900 text-slate-300 text-left text-xs uppercase tracking-[0.12em]">
+              <tr>
+                <th className="px-4 py-3">Ref</th>
+                <th className="px-4 py-3">Fecha</th>
+                <th className="px-4 py-3">Operación</th>
+                <th className="px-4 py-3">Cliente</th>
+                <th className="px-4 py-3">Descripción</th>
+                <th className="px-4 py-3">Cajero</th>
+                <th className="px-4 py-3 text-right">Entrada</th>
+                <th className="px-4 py-3 text-right">Salida</th>
               </tr>
-            ))}
-          </tbody>
-
-        </table>
+            </thead>
+            <tbody>
+              {data.length === 0 ? (
+                <tr>
+                  <td colSpan={8} className="px-4 py-10 text-center text-slate-400">
+                    No se encontraron transacciones para este almacén.
+                  </td>
+                </tr>
+              ) : (
+                data.map((r) => (
+                  <tr key={r.id} className="border-b border-slate-800 hover:bg-slate-900 transition-colors">
+                    <td className="px-4 py-4 text-slate-100">{r.referencia}</td>
+                    <td className="px-4 py-4 text-slate-300">{r.date}</td>
+                    <td className="px-4 py-4">
+                      <Badge className={tipoColors[r.categoria]}>
+                        {r.categoria}
+                      </Badge>
+                    </td>
+                    <td className="px-4 py-4 text-slate-100">{r.cliente}</td>
+                    <td className="px-4 py-4 text-xs text-slate-400">{r.descripcion}</td>
+                    <td className="px-4 py-4 text-slate-300">{r.analista}</td>
+                    <td className="px-4 py-4 text-right text-emerald-300 font-medium">{fmt(r.entrada)}</td>
+                    <td className="px-4 py-4 text-right text-rose-300 font-medium">{fmt(r.salida)}</td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
       </Card>
 
     </div>
