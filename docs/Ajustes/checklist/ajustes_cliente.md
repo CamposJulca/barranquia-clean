@@ -68,11 +68,11 @@ Documento extraído de: `docs/Ajustes/Documento Observaciones Joz Y Servipáramo
 - [ ] Ninguna acción requerida.
 
 ### 2.3 Módulo: Duplicados
-- [ ] Corregir la validación del estado del ETL.
-- [ ] Revisar flags de ejecución.
-- [ ] Revisar estado en backend.
-- [ ] Revisar mensajes mostrados en frontend.
-- [ ] Asegurar consistencia entre el estado real del ETL y el mensaje mostrado.
+- [x] Corregir la validación del estado del ETL.
+- [x] Revisar flags de ejecución.
+- [x] Revisar estado en backend.
+- [x] Revisar mensajes mostrados en frontend.
+- [x] Asegurar consistencia entre el estado real del ETL y el mensaje mostrado.
 
 ### 2.4 Módulo: Monitoreo ELT
 - [ ] Validar el funcionamiento general del módulo.
@@ -103,7 +103,7 @@ Documento extraído de: `docs/Ajustes/Documento Observaciones Joz Y Servipáramo
 - [ ] Corrección de visibilidad en JOZ (todos los módulos).
 - [x] Corrección de filtros y buscador en Alertas.
 - [x] Validación de lógica de negocio en Historial.
-- [ ] Sincronización de estado ETL en Servipáramo (Duplicados).
+- [x] Sincronización de estado ETL en Servipáramo (Duplicados).
 
 ### Prioridad Media
 - [x] Implementación de vistas de detalle en Riesgos.
