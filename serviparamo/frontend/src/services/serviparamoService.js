@@ -124,3 +124,15 @@ export const runETL = async (tablas = null) => {
   const res = await api.post('/api/serviparamo/etl/run/', body)
   return unwrap(res)
 }
+
+// ── Configuración ─────────────────────────────────────────────────────────────
+
+export const getConfiguracion = async () => {
+  const res = await api.get('/api/serviparamo/configuracion/')
+  return unwrap(res)?.data ?? null
+}
+
+export const updateConfiguracion = async (payload) => {
+  const res = await api.patch('/api/serviparamo/configuracion/', payload)
+  return unwrap(res)?.data ?? null
+}

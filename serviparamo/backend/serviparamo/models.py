@@ -219,3 +219,35 @@ class ETLLog(models.Model):
 
     def __str__(self):
         return f"{self.tabla_destino} @ {self.iniciado_en}"
+
+
+class Configuracion(models.Model):
+    """Configuración global del módulo Servipáramo."""
+
+    id = models.PositiveSmallIntegerField(primary_key=True, default=1, editable=False)
+
+    # Parámetros del sistema
+    nombre_empresa = models.CharField(max_length=120, default='Serviparamo Ingeniería')
+    correo_administrador = models.EmailField(default='admin@serviparamo.com')
+    zona_horaria = models.CharField(max_length=64, default='America/Bogota')
+
+    # Configuración ETL
+    etl_auto_sync_activo = models.BooleanField(default=False)
+    etl_intervalo_horas = models.PositiveSmallIntegerField(default=24)
+    etl_timeout_minutos = models.PositiveSmallIntegerField(default=60)
+    etl_solo_faltantes_embeddings = models.BooleanField(default=True)
+
+    # Preferencias de usuario
+    pref_notificaciones_email = models.BooleanField(default=True)
+    pref_alertas_duplicados = models.BooleanField(default=True)
+    pref_reporte_normalizacion_semanal = models.BooleanField(default=True)
+    pref_umbral_confianza = models.PositiveSmallIntegerField(default=85)
+    pref_umbral_similitud = models.PositiveSmallIntegerField(default=92)
+
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'serviparamo_configuracion'
+
+    def __str__(self):
+        return f"Configuración Servipáramo ({self.id})"

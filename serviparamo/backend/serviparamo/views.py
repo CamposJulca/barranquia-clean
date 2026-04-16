@@ -2,15 +2,18 @@ import re
 import time
 import threading
 import logging
+from zoneinfo import available_timezones
 
 from django.db import connection
 from django.db.models import Count, Q
+from django.core.exceptions import ValidationError
+from django.core.validators import validate_email
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework import status
 
 from .models import (
-    CatalogoSKU, CatalogoEmbedding,
+    CatalogoSKU, CatalogoEmbedding, Configuracion,
     RawCategoria, RawFamilia,
     RawOrdenEncabezado, RawOrdenDetalle,
     RawPedidoEncabezado, RawPedidoDetalle,
@@ -32,6 +35,7 @@ _PAGE_SIZE_MAX = 500
 _SEMANTIC_MODEL_NAME = 'all-MiniLM-L6-v2'
 _semantic_model = None
 _semantic_model_lock = threading.Lock()
+_AVAILABLE_TIMEZONES = available_timezones()
 
 
 def _paginar(qs, request):
@@ -66,6 +70,83 @@ def _get_semantic_model():
                 from sentence_transformers import SentenceTransformer
                 _semantic_model = SentenceTransformer(_SEMANTIC_MODEL_NAME)
     return _semantic_model
+
+
+def _serializar_configuracion(config: Configuracion):
+    return {
+        'sistema': {
+            'nombre_empresa': config.nombre_empresa,
+            'correo_administrador': config.correo_administrador,
+            'zona_horaria': config.zona_horaria,
+        },
+        'etl': {
+            'auto_sync_activo': config.etl_auto_sync_activo,
+            'intervalo_horas': config.etl_intervalo_horas,
+            'timeout_minutos': config.etl_timeout_minutos,
+            'solo_faltantes_embeddings': config.etl_solo_faltantes_embeddings,
+        },
+        'preferencias_usuario': {
+            'notificaciones_email': config.pref_notificaciones_email,
+            'alertas_duplicados': config.pref_alertas_duplicados,
+            'reporte_normalizacion_semanal': config.pref_reporte_normalizacion_semanal,
+            'umbral_confianza': config.pref_umbral_confianza,
+            'umbral_similitud': config.pref_umbral_similitud,
+        },
+        'updated_at': config.updated_at.isoformat() if config.updated_at else None,
+    }
+
+
+def _coerce_bool(value, field):
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, int) and value in (0, 1):
+        return bool(value)
+    if isinstance(value, str):
+        normalized = value.strip().lower()
+        if normalized in ('true', '1', 'si', 'sí'):
+            return True
+        if normalized in ('false', '0', 'no'):
+            return False
+    raise ValueError(f'{field}: valor booleano inválido.')
+
+
+def _coerce_int(value, field, min_value, max_value):
+    if isinstance(value, bool):
+        raise ValueError(f'{field}: valor numérico inválido.')
+    try:
+        ivalue = int(value)
+    except (TypeError, ValueError):
+        raise ValueError(f'{field}: valor numérico inválido.')
+    if ivalue < min_value or ivalue > max_value:
+        raise ValueError(f'{field}: debe estar entre {min_value} y {max_value}.')
+    return ivalue
+
+
+def _coerce_text(value, field, min_len=1, max_len=255):
+    if value is None:
+        raise ValueError(f'{field}: valor requerido.')
+    text = str(value).strip()
+    if len(text) < min_len:
+        raise ValueError(f'{field}: longitud mínima {min_len}.')
+    if len(text) > max_len:
+        raise ValueError(f'{field}: longitud máxima {max_len}.')
+    return text
+
+
+def _coerce_email(value, field):
+    email = _coerce_text(value, field, min_len=5, max_len=254)
+    try:
+        validate_email(email)
+    except ValidationError:
+        raise ValueError(f'{field}: correo inválido.')
+    return email
+
+
+def _coerce_timezone(value, field):
+    timezone = _coerce_text(value, field, min_len=3, max_len=64)
+    if timezone not in _AVAILABLE_TIMEZONES:
+        raise ValueError(f'{field}: zona horaria inválida.')
+    return timezone
 
 
 # ── SKUs ─────────────────────────────────────────────────────────────────────
@@ -209,6 +290,176 @@ def pedido_detail(request, pedido):
     }))
 
 
+# ── Configuración ─────────────────────────────────────────────────────────────
+
+@api_view(['GET', 'PATCH'])
+def configuracion(request):
+    """Configuración global de sistema, ETL y preferencias de usuario."""
+    config, _ = Configuracion.objects.get_or_create(pk=1)
+
+    if request.method == 'GET':
+        return Response(_ok(_serializar_configuracion(config)))
+
+    payload = request.data or {}
+    if not isinstance(payload, dict):
+        return _err('Payload inválido.')
+
+    field_errors = {}
+    updates = {}
+
+    sistema = payload.get('sistema')
+    if sistema is not None:
+        if not isinstance(sistema, dict):
+            field_errors['sistema'] = 'Debe ser un objeto.'
+        else:
+            if 'nombre_empresa' in sistema:
+                try:
+                    updates['nombre_empresa'] = _coerce_text(
+                        sistema.get('nombre_empresa'),
+                        'sistema.nombre_empresa',
+                        min_len=2,
+                        max_len=120,
+                    )
+                except ValueError as exc:
+                    field_errors['sistema.nombre_empresa'] = str(exc)
+
+            if 'correo_administrador' in sistema:
+                try:
+                    updates['correo_administrador'] = _coerce_email(
+                        sistema.get('correo_administrador'),
+                        'sistema.correo_administrador',
+                    )
+                except ValueError as exc:
+                    field_errors['sistema.correo_administrador'] = str(exc)
+
+            if 'zona_horaria' in sistema:
+                try:
+                    updates['zona_horaria'] = _coerce_timezone(
+                        sistema.get('zona_horaria'),
+                        'sistema.zona_horaria',
+                    )
+                except ValueError as exc:
+                    field_errors['sistema.zona_horaria'] = str(exc)
+
+    etl = payload.get('etl')
+    if etl is not None:
+        if not isinstance(etl, dict):
+            field_errors['etl'] = 'Debe ser un objeto.'
+        else:
+            if 'auto_sync_activo' in etl:
+                try:
+                    updates['etl_auto_sync_activo'] = _coerce_bool(
+                        etl.get('auto_sync_activo'),
+                        'etl.auto_sync_activo',
+                    )
+                except ValueError as exc:
+                    field_errors['etl.auto_sync_activo'] = str(exc)
+
+            if 'intervalo_horas' in etl:
+                try:
+                    updates['etl_intervalo_horas'] = _coerce_int(
+                        etl.get('intervalo_horas'),
+                        'etl.intervalo_horas',
+                        min_value=1,
+                        max_value=168,
+                    )
+                except ValueError as exc:
+                    field_errors['etl.intervalo_horas'] = str(exc)
+
+            if 'timeout_minutos' in etl:
+                try:
+                    updates['etl_timeout_minutos'] = _coerce_int(
+                        etl.get('timeout_minutos'),
+                        'etl.timeout_minutos',
+                        min_value=5,
+                        max_value=720,
+                    )
+                except ValueError as exc:
+                    field_errors['etl.timeout_minutos'] = str(exc)
+
+            if 'solo_faltantes_embeddings' in etl:
+                try:
+                    updates['etl_solo_faltantes_embeddings'] = _coerce_bool(
+                        etl.get('solo_faltantes_embeddings'),
+                        'etl.solo_faltantes_embeddings',
+                    )
+                except ValueError as exc:
+                    field_errors['etl.solo_faltantes_embeddings'] = str(exc)
+
+    preferencias = payload.get('preferencias_usuario')
+    if preferencias is not None:
+        if not isinstance(preferencias, dict):
+            field_errors['preferencias_usuario'] = 'Debe ser un objeto.'
+        else:
+            if 'notificaciones_email' in preferencias:
+                try:
+                    updates['pref_notificaciones_email'] = _coerce_bool(
+                        preferencias.get('notificaciones_email'),
+                        'preferencias_usuario.notificaciones_email',
+                    )
+                except ValueError as exc:
+                    field_errors['preferencias_usuario.notificaciones_email'] = str(exc)
+
+            if 'alertas_duplicados' in preferencias:
+                try:
+                    updates['pref_alertas_duplicados'] = _coerce_bool(
+                        preferencias.get('alertas_duplicados'),
+                        'preferencias_usuario.alertas_duplicados',
+                    )
+                except ValueError as exc:
+                    field_errors['preferencias_usuario.alertas_duplicados'] = str(exc)
+
+            if 'reporte_normalizacion_semanal' in preferencias:
+                try:
+                    updates['pref_reporte_normalizacion_semanal'] = _coerce_bool(
+                        preferencias.get('reporte_normalizacion_semanal'),
+                        'preferencias_usuario.reporte_normalizacion_semanal',
+                    )
+                except ValueError as exc:
+                    field_errors['preferencias_usuario.reporte_normalizacion_semanal'] = str(exc)
+
+            if 'umbral_confianza' in preferencias:
+                try:
+                    updates['pref_umbral_confianza'] = _coerce_int(
+                        preferencias.get('umbral_confianza'),
+                        'preferencias_usuario.umbral_confianza',
+                        min_value=0,
+                        max_value=100,
+                    )
+                except ValueError as exc:
+                    field_errors['preferencias_usuario.umbral_confianza'] = str(exc)
+
+            if 'umbral_similitud' in preferencias:
+                try:
+                    updates['pref_umbral_similitud'] = _coerce_int(
+                        preferencias.get('umbral_similitud'),
+                        'preferencias_usuario.umbral_similitud',
+                        min_value=0,
+                        max_value=100,
+                    )
+                except ValueError as exc:
+                    field_errors['preferencias_usuario.umbral_similitud'] = str(exc)
+
+    if field_errors:
+        return Response(
+            {
+                'ok': False,
+                'error': 'Errores de validación en configuración.',
+                'fields': field_errors,
+            },
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    if not updates:
+        return Response(_ok(_serializar_configuracion(config)))
+
+    for field, value in updates.items():
+        setattr(config, field, value)
+    config.save(update_fields=[*updates.keys(), 'updated_at'])
+
+    return Response(_ok(_serializar_configuracion(config)))
+
+
 # ── ETL ───────────────────────────────────────────────────────────────────────
 
 @api_view(['GET'])
@@ -282,8 +533,13 @@ def etl_run(request):
 
             if should_index:
                 try:
+                    solo_faltantes = True
+                    conf = Configuracion.objects.filter(pk=1).only('etl_solo_faltantes_embeddings').first()
+                    if conf is not None:
+                        solo_faltantes = bool(conf.etl_solo_faltantes_embeddings)
+
                     from serviparamo.embeddings import run as run_embeddings
-                    run_embeddings(solo_faltantes=True)
+                    run_embeddings(solo_faltantes=solo_faltantes)
                 except Exception as emb_exc:
                     # No abortar el ETL si falla la indexación semántica.
                     logger.error(f"Indexación semántica falló tras ETL: {emb_exc}")
