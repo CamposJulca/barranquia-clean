@@ -1,6 +1,7 @@
 import { createBrowserRouter } from "react-router-dom";
 
 import DashboardLayout from "../layouts/DashboardLayout";
+import AuthGuard from "../services/AuthGuard";
 
 import Dashboard from "../pages/Dashboard";
 import Alerts from "../pages/Alerts";
@@ -15,7 +16,11 @@ export const router = createBrowserRouter(
   [
     {
       path: "/",
-      element: <DashboardLayout />,
+      element: (
+        <AuthGuard>
+          <DashboardLayout />
+        </AuthGuard>
+      ),
       children: [
         { index: true, element: <Dashboard /> },
         { path: "alerts", element: <Alerts /> },

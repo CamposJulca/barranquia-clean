@@ -1,9 +1,44 @@
 import axios from 'axios'
 
+const HUB_URL = import.meta.env.VITE_HUB_URL ?? '/'
+
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL || 'http://localhost:8003/api/joz',
   timeout: Number(import.meta.env.VITE_API_TIMEOUT) || 15000,
 })
+
+const getToken = () => {
+  const token = localStorage.getItem('token')
+  if (!token) return null
+  const trimmed = token.trim()
+  return trimmed.length > 0 ? trimmed : null
+}
+
+const logoutAndRedirect = () => {
+  localStorage.removeItem('token')
+  window.location.replace(HUB_URL)
+}
+
+api.interceptors.request.use(
+  (config) => {
+    const token = getToken()
+    if (token) {
+      config.headers.Authorization = `Token ${token}`
+    }
+    return config
+  },
+  (error) => Promise.reject(error)
+)
+
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error?.response?.status === 401) {
+      logoutAndRedirect()
+    }
+    return Promise.reject(error)
+  }
+)
 
 // 🔥 helper para normalizar respuestas del backend
 const unwrap = (res) => res.data?.data ?? res.data

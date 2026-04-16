@@ -15,7 +15,7 @@ Documento extraído de: `docs/Ajustes/Documento Observaciones Joz Y Servipáramo
   - [x] Historial
   - [x] Monitoreo externo
 - [x] Mover el logo a la parte superior izquierda en la rama frontend.
-- [ ] Revisar la lógica de login para cada proyecto.
+- [x] Revisar la lógica de login para cada proyecto.
 
 ### 1.2 Módulo: Dashboard
 - [x] Ajustar contraste y estilos visuales en la vista de detalle por almacén.
@@ -48,7 +48,7 @@ Documento extraído de: `docs/Ajustes/Documento Observaciones Joz Y Servipáramo
 - [x] Implementar paginación (`count/page/page_size`) y estados UX (`loading/error/vacío`).
 
 ### 1.6 Módulo: ETL
-- [ ] Ninguna acción requerida.
+- [x] Ninguna acción requerida.
 
 ### 1.7 Módulo: Configuraciones
 - [x] Definir alcance funcional de cada sección:
@@ -62,10 +62,10 @@ Documento extraído de: `docs/Ajustes/Documento Observaciones Joz Y Servipáramo
 ## 2. Proyecto Servipáramo
 
 ### 2.1 Módulo: Página principal
-- [ ] Ninguna acción requerida.
+- [x] Ninguna acción requerida.
 
 ### 2.2 Módulo: Catálogo
-- [ ] Ninguna acción requerida.
+- [x] Ninguna acción requerida.
 
 ### 2.3 Módulo: Duplicados
 - [x] Corregir la validación del estado del ETL.
@@ -79,7 +79,7 @@ Documento extraído de: `docs/Ajustes/Documento Observaciones Joz Y Servipáramo
 - [x] Confirmar que no se requieren cambios adicionales.
 
 ### 2.5 Módulo: Analítica
-- [ ] Ninguna acción requerida.
+- [x] Ninguna acción requerida.
 
 ### 2.6 Módulo: Búsqueda Semántica
 - [x] Validar ejecución del ETL.
@@ -88,7 +88,7 @@ Documento extraído de: `docs/Ajustes/Documento Observaciones Joz Y Servipáramo
 - [x] Confirmar disponibilidad de datos para búsqueda.
 
 ### 2.7 Módulo: Consola SQL
-- [ ] Ninguna acción requerida.
+- [x] Ninguna acción requerida.
 
 ### 2.8 Módulo: Configuraciones
 - [x] Definir qué información y opciones estarán disponibles:
@@ -100,7 +100,7 @@ Documento extraído de: `docs/Ajustes/Documento Observaciones Joz Y Servipáramo
 ## 3. Conclusión General
 
 ### Prioridad Alta
-- [ ] Corrección de visibilidad en JOZ (todos los módulos).
+- [x] Corrección de visibilidad en JOZ (todos los módulos).
 - [x] Corrección de filtros y buscador en Alertas.
 - [x] Validación de lógica de negocio en Historial.
 - [x] Sincronización de estado ETL en Servipáramo (Duplicados).
