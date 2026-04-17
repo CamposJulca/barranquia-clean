@@ -4,7 +4,7 @@ import useSessionStore from '../store/useSessionStore'
 const HUB_URL = import.meta.env.VITE_HUB_URL ?? '/'
 
 const getTokenFromStorage = () => {
-  const token = localStorage.getItem('token')
+  const token = localStorage.getItem('serviparamo_token') || localStorage.getItem('token')
   if (!token) return null
   const trimmed = token.trim()
   return trimmed.length > 0 ? trimmed : null
@@ -22,7 +22,7 @@ export default function AuthGuard({ children }) {
   }, [setToken, tokenInStore, token])
 
   if (!token) {
-    window.location.replace(HUB_URL)
+    window.location.replace('/serviparamo/login')
     return null
   }
 

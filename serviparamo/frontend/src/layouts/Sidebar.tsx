@@ -10,6 +10,7 @@ import {
   Settings,
   Terminal,
   ArrowLeft,
+  LogOut,
 } from "lucide-react";
 
 const HUB_URL = import.meta.env.VITE_HUB_URL ?? '/'
@@ -85,6 +86,29 @@ export default function Sidebar() {
           );
         })}
       </nav>
+
+      {/* FOOTER */}
+      <div className="px-3 py-4 border-t border-white/10 space-y-1">
+        <a
+          href={HUB_URL}
+          className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-white/80 hover:bg-sp-primary-dark transition"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          <span className="text-sm font-medium">Volver al Hub</span>
+        </a>
+        <button
+          onClick={() => {
+            localStorage.removeItem('serviparamo_token');
+            localStorage.removeItem('serviparamo_username');
+            localStorage.removeItem('token');
+            window.location.replace('/serviparamo/login');
+          }}
+          className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-red-300/80 hover:bg-red-900/30 hover:text-red-200 transition w-full"
+        >
+          <LogOut className="w-4 h-4" />
+          <span className="text-sm font-medium">Cerrar sesión</span>
+        </button>
+      </div>
     </div>
   );
 }

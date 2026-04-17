@@ -11,8 +11,10 @@ COPY serviparamo/frontend/ .
 # VITE_API_URL vacío → Axios usa rutas relativas → pasan por nginx
 ARG VITE_API_URL=""
 ARG VITE_API_TIMEOUT=15000
+ARG VITE_BASENAME="/serviparamo"
 ENV VITE_API_URL=${VITE_API_URL} \
-    VITE_API_TIMEOUT=${VITE_API_TIMEOUT}
+    VITE_API_TIMEOUT=${VITE_API_TIMEOUT} \
+    VITE_BASENAME=${VITE_BASENAME}
 
 RUN npm run build
 

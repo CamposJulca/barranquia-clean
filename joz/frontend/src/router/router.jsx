@@ -2,6 +2,7 @@ import { createBrowserRouter } from "react-router-dom";
 
 import DashboardLayout from "../layouts/DashboardLayout";
 import AuthGuard from "../services/AuthGuard";
+import Login from "../pages/Login";
 
 import Dashboard from "../pages/Dashboard";
 import Alerts from "../pages/Alerts";
@@ -14,6 +15,7 @@ import ETLMonitor from "../pages/ETLMonitor";
 // basename="/joz" permite que la SPA viva bajo /joz/ en producción (nginx).
 export const router = createBrowserRouter(
   [
+    { path: "/login", element: <Login /> },
     {
       path: "/",
       element: (

@@ -10,12 +10,11 @@ import SemanticSearch from "../pages/SemanticSearch";
 import Settings from "../pages/Settings";
 import QueryConsole from "../pages/QueryConsole";
 import AuthGuard from "../guards/AuthGuard";
+import Login from "../pages/Login";
 
-// basename="/serviparamo" permite que la SPA viva bajo /serviparamo/
-// cuando se sirve detrás del nginx reverse-proxy en Docker.
-// En desarrollo (npm run dev) Vite sirve desde / y también funciona.
 export const router = createBrowserRouter(
   [
+    { path: "/login", element: <Login /> },
     {
       path: "/",
       element: (
@@ -35,7 +34,5 @@ export const router = createBrowserRouter(
       ],
     },
   ],
-  //{ basename: import.meta.env.VITE_BASENAME ?? "/serviparamo" }
-  
-  { basename: import.meta.env.VITE_BASENAME ?? "/" }
+  { basename: import.meta.env.VITE_BASENAME ?? "/serviparamo" }
 );

@@ -3,7 +3,7 @@ import axios from 'axios'
 const HUB_URL = import.meta.env.VITE_HUB_URL ?? '/'
 
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:8003/api/joz',
+  baseURL: import.meta.env.VITE_API_URL || '/api/joz',
   timeout: Number(import.meta.env.VITE_API_TIMEOUT) || 15000,
 })
 
@@ -39,6 +39,11 @@ api.interceptors.response.use(
     return Promise.reject(error)
   }
 )
+
+export const loginUser = async (username, password) => {
+  const res = await axios.post(`${import.meta.env.VITE_API_URL || '/api/joz'}/login/`, { username, password })
+  return res.data
+}
 
 // 🔥 helper para normalizar respuestas del backend
 const unwrap = (res) => res.data?.data ?? res.data
