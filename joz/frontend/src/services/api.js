@@ -1,22 +1,21 @@
 import axios from 'axios'
 
-const HUB_URL = import.meta.env.VITE_HUB_URL ?? '/'
-
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL || '/api/joz',
   timeout: Number(import.meta.env.VITE_API_TIMEOUT) || 15000,
 })
 
 const getToken = () => {
-  const token = localStorage.getItem('token')
+  const token = localStorage.getItem('joz_token')
   if (!token) return null
   const trimmed = token.trim()
   return trimmed.length > 0 ? trimmed : null
 }
 
 const logoutAndRedirect = () => {
-  localStorage.removeItem('token')
-  window.location.replace(HUB_URL)
+  localStorage.removeItem('joz_token')
+  localStorage.removeItem('joz_username')
+  window.location.replace('/joz/login')
 }
 
 api.interceptors.request.use(

@@ -1,8 +1,6 @@
 import axios from 'axios'
 import useSessionStore from '../store/useSessionStore'
 
-const HUB_URL = import.meta.env.VITE_HUB_URL ?? '/'
-
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL,
   timeout: Number(import.meta.env.VITE_API_TIMEOUT) || 10000,
@@ -12,7 +10,7 @@ const getToken = () => {
   const storeToken = useSessionStore.getState().token
   if (storeToken && storeToken.trim().length > 0) return storeToken.trim()
 
-  const localToken = localStorage.getItem('token')
+  const localToken = localStorage.getItem('serviparamo_token')
   if (!localToken) return null
   const trimmed = localToken.trim()
   return trimmed.length > 0 ? trimmed : null
@@ -20,8 +18,9 @@ const getToken = () => {
 
 const logoutAndRedirect = () => {
   useSessionStore.getState().setToken(null)
-  localStorage.removeItem('token')
-  window.location.replace(HUB_URL)
+  localStorage.removeItem('serviparamo_token')
+  localStorage.removeItem('serviparamo_username')
+  window.location.replace('/serviparamo/login')
 }
 
 api.interceptors.request.use(

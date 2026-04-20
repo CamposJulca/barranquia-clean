@@ -1,10 +1,8 @@
 import { useEffect } from 'react'
 import useSessionStore from '../store/useSessionStore'
 
-const HUB_URL = import.meta.env.VITE_HUB_URL ?? '/'
-
 const getTokenFromStorage = () => {
-  const token = localStorage.getItem('serviparamo_token') || localStorage.getItem('token')
+  const token = localStorage.getItem('serviparamo_token')
   if (!token) return null
   const trimmed = token.trim()
   return trimmed.length > 0 ? trimmed : null

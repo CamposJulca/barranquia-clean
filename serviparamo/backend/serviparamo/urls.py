@@ -2,6 +2,9 @@ from django.urls import path
 from . import views
 
 urlpatterns = [
+    # Auth
+    path('login/',               views.login,           name='serviparamo-login'),
+
     # SKUs
     path('skus/',                views.skus_list,       name='serviparamo-skus-list'),
     path('skus/<str:codigo>/',   views.sku_detail,      name='serviparamo-sku-detail'),

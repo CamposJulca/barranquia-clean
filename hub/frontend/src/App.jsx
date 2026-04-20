@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react'
-import { Routes, Route, useNavigate } from 'react-router-dom'
+import { Routes, Route } from 'react-router-dom'
 import axios from 'axios'
-import Login from './Login'
 import './App.css'
 
 const SERVICES = [
@@ -32,8 +31,6 @@ const SERVICES = [
 ]
 
 function ServiceCard({ service }) {
-  const navigate = useNavigate()
-
   const handleNavigation = () => {
     if (service.externalUrl) {
       window.location.href = service.externalUrl
@@ -57,7 +54,7 @@ function ServiceCard({ service }) {
   )
 }
 
-function Hub({ token, username, onLogout }) {
+function Hub() {
   const [health, setHealth] = useState(null)
 
   useEffect(() => {
@@ -80,10 +77,6 @@ function Hub({ token, username, onLogout }) {
           <div className="header-right">
             <div className={`health-badge ${health?.status === 'ok' ? 'ok' : 'checking'}`}>
               {health?.status === 'ok' ? '● En línea' : '○ Conectando...'}
-            </div>
-            <div className="user-menu">
-              <span className="username">{username}</span>
-              <button className="logout-btn" onClick={onLogout}>Salir</button>
             </div>
           </div>
         </div>
@@ -109,33 +102,9 @@ function Hub({ token, username, onLogout }) {
 }
 
 function App() {
-  const [token, setToken] = useState(() => localStorage.getItem('token'))
-  const [username, setUsername] = useState(() => localStorage.getItem('username') || '')
-
-  function handleLogin(newToken, newUsername) {
-    localStorage.setItem('token', newToken)
-    localStorage.setItem('username', newUsername)
-    setToken(newToken)
-    setUsername(newUsername)
-  }
-
-  async function handleLogout() {
-    try {
-      await axios.post('/api/logout/', {}, {
-        headers: { Authorization: `Token ${token}` },
-      })
-    } catch (_) {}
-    localStorage.removeItem('token')
-    localStorage.removeItem('username')
-    setToken(null)
-    setUsername('')
-  }
-
-  if (!token) return <Login onLogin={handleLogin} />
-
   return (
     <Routes>
-      <Route path="*" element={<Hub token={token} username={username} onLogout={handleLogout} />} />
+      <Route path="*" element={<Hub />} />
     </Routes>
   )
 }

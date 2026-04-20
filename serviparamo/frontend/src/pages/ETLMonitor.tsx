@@ -6,7 +6,7 @@ import {
   RefreshCw, CheckCircle, XCircle, Loader,
   Activity, Clock, AlertTriangle, Play, Database, Zap,
 } from "lucide-react";
-import { getEtlStatus, runEtl } from "../services/api";
+import { getETLStatus, runETL } from "../services/serviparamoService";
 
 interface ETLLogEntry {
   id: number;
@@ -54,7 +54,7 @@ export default function ETLMonitor() {
 
   const load = useCallback(async () => {
     try {
-      const res = await getEtlStatus();
+      const res = await getETLStatus();
       setCorriendo(res.corriendo ?? false);
       setEntries(Array.isArray(res.data) ? res.data : []);
       setResumen(res.resumen ?? null);
@@ -76,7 +76,7 @@ export default function ETLMonitor() {
     setRunning(true);
     setMensaje(null);
     try {
-      const res = await runEtl();
+      const res = await runETL();
       const msg = res?.mensaje ?? "ETL iniciado en segundo plano.";
       setMensaje({ text: msg, ok: true });
       setCorriendo(true);
