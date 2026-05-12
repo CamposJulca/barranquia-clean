@@ -109,7 +109,7 @@ class Riesgo(models.Model):
     )
     probabilidad = models.FloatField(null=True, blank=True)
     impacto_estimado = models.DecimalField(max_digits=18, decimal_places=2, null=True, blank=True)
-    calculado_en = models.DateTimeField(auto_now_add=True)
+    calculado_en = models.DateTimeField(auto_now=True)
 
     class Meta:
         db_table = 'joz_riesgos'
