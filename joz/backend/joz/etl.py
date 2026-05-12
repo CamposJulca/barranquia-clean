@@ -126,12 +126,13 @@ def _cargar_movimientos(registros: list, fecha_consulta, codalmacen: int) -> dic
     """
     from .models import Transaccion
 
-    # IDs ya existentes en BD para este día → evitar duplicados
+    # IDs ya existentes en BD → evitar duplicados (sin filtrar por fecha)
+    ids_entrantes = {int(r['id']) for r in registros if r.get('id')}
     ids_existentes = set(
         Transaccion.objects
-        .filter(fecha=fecha_consulta, id_externo__isnull=False)
+        .filter(id_externo__in=ids_entrantes)
         .values_list('id_externo', flat=True)
-    )
+    ) if ids_entrantes else set()
 
     nuevas = []
     errores = 0
