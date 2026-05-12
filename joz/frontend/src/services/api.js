@@ -15,7 +15,7 @@ const getToken = () => {
 const logoutAndRedirect = () => {
   localStorage.removeItem('joz_token')
   localStorage.removeItem('joz_username')
-  window.location.replace('/joz/login')
+  window.location.replace('/login')
 }
 
 api.interceptors.request.use(
@@ -47,13 +47,13 @@ export const loginUser = async (username, password) => {
 // 🔥 helper para normalizar respuestas del backend
 const unwrap = (res) => res.data?.data ?? res.data
 
-export const getStats = async () => {
-  const res = await api.get('/stats/')
+export const getStats = async (params) => {
+  const res = await api.get('/stats/', { params })
   return unwrap(res)
 }
 
-export const getAnomaliasPorDia = async () => {
-  const res = await api.get('/anomalias-por-dia/')
+export const getAnomaliasPorDia = async (params) => {
+  const res = await api.get('/anomalias-por-dia/', { params })
   return unwrap(res)
 }
 
@@ -64,6 +64,21 @@ export const getAlertas = async (params) => {
 
 export const updateAlerta = async (id, estado) => {
   const res = await api.patch(`/alertas/${id}/`, { estado })
+  return unwrap(res)
+}
+
+export const bulkUpdateAlertas = async (ids, estado) => {
+  const res = await api.patch('/alertas/', { ids, estado })
+  return unwrap(res)
+}
+
+export const bulkDeleteAlertas = async (ids) => {
+  const res = await api.delete('/alertas/', { data: { ids } })
+  return unwrap(res)
+}
+
+export const deleteAllAlertas = async () => {
+  const res = await api.delete('/alertas/', { data: { todos: true } })
   return unwrap(res)
 }
 
@@ -78,18 +93,13 @@ export const getRiesgoDetalle = async (id) => {
   return unwrap(res)
 }
 
+export const getRiesgosConfig = async () => {
+  const res = await api.get('/riesgos/config/')
+  return unwrap(res)
+}
+
 export const getHistorial = async (params) => {
   const res = await api.get('/historial/', { params })
-  return unwrap(res)
-}
-
-export const getConfigDeteccion = async () => {
-  const res = await api.get('/config/deteccion/')
-  return unwrap(res)
-}
-
-export const updateConfigDeteccion = async (payload) => {
-  const res = await api.patch('/config/deteccion/', payload)
   return unwrap(res)
 }
 
@@ -108,3 +118,47 @@ export const runEtl = async (params) => {
   const res = await api.post('/etl/run/', params)
   return unwrap(res)
 }
+
+export const getEtlSchedule = async () => {
+  const res = await api.get('/etl/schedule/')
+  return unwrap(res)
+}
+
+export const executeSql = async (query, limit = 500) => {
+  const res = await api.post('/sql/execute/', { query, limit }, { timeout: 30000 })
+  return unwrap(res)
+}
+
+export const getSqlSchema = async () => {
+  const res = await api.get('/sql/schema/')
+  return unwrap(res)
+}
+
+export const runDeteccion = async (params = {}) => {
+  const res = await api.post('/detectar/', params)
+  return unwrap(res)
+}
+
+// ── Reglas de detección (CRUD) ─────────────────────────────────────────────
+
+export const getReglas = async () => {
+  const res = await api.get('/reglas/')
+  return unwrap(res)
+}
+
+export const createRegla = async (data) => {
+  const res = await api.post('/reglas/', data)
+  return unwrap(res)
+}
+
+export const updateRegla = async (id, data) => {
+  const res = await api.patch(`/reglas/${id}/`, data)
+  return unwrap(res)
+}
+
+export const deleteRegla = async (id) => {
+  const res = await api.delete(`/reglas/${id}/`)
+  return unwrap(res)
+}
+
+export default api
