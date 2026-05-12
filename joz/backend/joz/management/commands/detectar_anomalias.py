@@ -61,14 +61,25 @@ class Command(BaseCommand):
                             help='Solo muestra detecciones sin crear alertas')
         parser.add_argument('--dias', type=int, default=0,
                             help='Analizar solo los últimos N días (0=todos)')
+        parser.add_argument('--regla', type=str, default='',
+                            help='Si se especifica, evalúa solo esa regla por nombre exacto')
 
     def handle(self, *args, **options):
         limpiar = options['limpiar']
         dry_run = options['dry_run']
         dias = options['dias']
+        regla_filtro = (options.get('regla') or '').strip()
 
-        # Cargar reglas habilitadas
-        reglas = list(ReglaDeteccion.objects.filter(habilitada=True).order_by('orden', 'id'))
+        # Cargar reglas habilitadas (opcionalmente filtradas por nombre)
+        reglas_qs = ReglaDeteccion.objects.filter(habilitada=True)
+        if regla_filtro:
+            reglas_qs = reglas_qs.filter(nombre=regla_filtro)
+        reglas = list(reglas_qs.order_by('orden', 'id'))
+        if not reglas and regla_filtro:
+            self.stdout.write(self.style.WARNING(
+                f'No hay regla habilitada con nombre "{regla_filtro}".'
+            ))
+            return
         if not reglas:
             self.stdout.write(self.style.WARNING('No hay reglas habilitadas.'))
             return
@@ -98,9 +109,10 @@ class Command(BaseCommand):
 
         # Ejecutar cada regla según su motor
         MOTORES = {
-            'zscore': self._motor_zscore,
-            'conteo': self._motor_conteo,
-            'ratio':  self._motor_ratio,
+            'zscore':        self._motor_zscore,
+            'conteo':        self._motor_conteo,
+            'ratio':         self._motor_ratio,
+            'contrapartida': self._motor_contrapartida,
         }
 
         for regla in reglas:
@@ -399,6 +411,184 @@ class Command(BaseCommand):
 
         self.stdout.write(f'    → {len(alertas)} anomalías')
         return alertas
+
+    # ═════════════════════════════════════════════════════════════════════════
+    # Motor contrapartida — Salidas de traslado/gasto sin entrada-pareja
+    # ═════════════════════════════════════════════════════════════════════════
+    # Patrones que delimitan el universo (traslados y gastos cruzados entre
+    # almacenes). Case-insensitive.
+    _CONTRAPARTIDA_PATTERNS = [
+        'traslado',
+        'movimiento entre',
+        'gastos x almacen',
+        'super pago alm',
+    ]
+    # Regex de fallback cuando raw_data no trae almdestino — busca "ALM DEST: 12"
+    # o variantes ("ALMDEST", "ALM. DEST.", "DEST 12", etc.).
+    _RE_DESTINO_DESC = re.compile(
+        r'(?:ALM[.\s]?\s*DEST[A-Z]*|DEST)[:.\s]+(\d+)', re.I
+    )
+
+    def _motor_contrapartida(self, qs, regla):
+        from datetime import timedelta
+        from django.db.models import Q
+
+        ventana_dias = int(self._param(regla, 'ventana_dias', 3))
+        tolerancia_pct = self._param(regla, 'tolerancia_monto_pct', 0.0)
+        tipos_apl = self._tipos_aplicables(regla)
+
+        self.stdout.write(
+            f'  [{regla.nombre}] matching contrapartida '
+            f'(ventana={ventana_dias}d, tolerancia={tolerancia_pct}%, tipos={tipos_apl})...'
+        )
+
+        # Q de patrones (descripción case-insensitive)
+        patron_q = Q()
+        for p in self._CONTRAPARTIDA_PATTERNS:
+            patron_q |= Q(descripcion__icontains=p)
+
+        base_qs = qs.filter(tipo__in=tipos_apl, almacen__isnull=False).filter(patron_q)
+
+        todas_salidas = list(
+            base_qs.filter(salida__gt=0)
+            .values_list('id', 'almacen', 'monto', 'salida', 'fecha',
+                         'descripcion', 'raw_data')
+        )
+        entradas = list(
+            base_qs.filter(entrada__gt=0)
+            .values_list('id', 'almacen', 'monto', 'entrada', 'fecha')
+        )
+
+        # Filtrar operaciones intra-almacén: TRASLADO DE CAJA / GASTOS X ALMACEN
+        # del ERP registran almdestino == almorigen porque son contabilidad
+        # interna del propio almacén (cierre de turno, gasto local). NO son
+        # traslados entre almacenes y no corresponde buscar contrapartida.
+        salidas = []
+        n_intra_almacen = 0
+        for tid, alm_origen, monto, salida_val, fecha, descripcion, raw_data in todas_salidas:
+            if self._es_intra_almacen(raw_data, alm_origen):
+                n_intra_almacen += 1
+                continue
+            salidas.append((tid, alm_origen, monto, salida_val, fecha, descripcion, raw_data))
+
+        # Índice (almacen_destino, fecha) → lista de candidatas
+        entradas_idx = defaultdict(list)
+        for eid, alm, monto, entrada, fecha in entradas:
+            entradas_idx[(alm, fecha)].append({
+                'id': eid,
+                'monto': float(monto or 0),
+                'matched': False,
+            })
+
+        self.stdout.write(
+            f'    Universo: {len(todas_salidas)} salidas con patrón '
+            f'({n_intra_almacen} intra-almacén descartadas), '
+            f'{len(salidas)} candidatas reales, {len(entradas)} entradas candidatas.'
+        )
+
+        n_indeterminado = 0
+        n_emparejado = 0
+        n_sin_pareja = 0
+        alertas = []
+
+        for tid, alm_origen, monto, _salida_val, fecha, descripcion, raw_data in salidas:
+            alm_destino = self._destino_esperado(raw_data, descripcion, alm_origen)
+            if alm_destino is None:
+                n_indeterminado += 1
+                continue
+
+            monto_s = float(monto or 0)
+            tolerancia = abs(monto_s) * (tolerancia_pct / 100.0)
+
+            pareja = None
+            for d in range(ventana_dias + 1):
+                fecha_buscar = fecha + timedelta(days=d)
+                for ent in entradas_idx.get((alm_destino, fecha_buscar), []):
+                    if ent['matched']:
+                        continue
+                    if abs(ent['monto'] - monto_s) <= tolerancia:
+                        ent['matched'] = True
+                        pareja = ent
+                        break
+                if pareja:
+                    break
+
+            if pareja:
+                n_emparejado += 1
+                continue
+
+            n_sin_pareja += 1
+            desc_corta = (descripcion or '').strip()[:120]
+            alertas.append({
+                'transaccion_id': tid,
+                'tipo': regla.nombre,
+                'descripcion': (
+                    f'Salida de ${monto_s:,.0f} desde almacén {alm_origen} '
+                    f'hacia almacén {alm_destino} el {fecha}, sin contrapartida '
+                    f'tras {ventana_dias} día(s). Descripción: "{desc_corta}".'
+                ),
+                'severidad': 'alta',
+                'score': 75.0,
+            })
+
+        self.stdout.write(
+            f'    → {n_emparejado} emparejadas, {n_sin_pareja} sin contrapartida, '
+            f'{n_indeterminado} con destino indeterminado.'
+        )
+        return alertas
+
+    def _es_intra_almacen(self, raw_data, alm_origen):
+        """
+        True si la transacción es contabilidad interna del almacén
+        (almdestino == almorigen). Casos típicos: TRASLADO DE CAJA SALIDA,
+        GASTOS X ALMACEN — son gastos/cierres locales, no traslados entre
+        almacenes y no corresponde validar contrapartida cruzada.
+        """
+        if not isinstance(raw_data, dict):
+            return False
+        try:
+            dest = raw_data.get('almdestino')
+            orig = raw_data.get('almorigen')
+            if dest in (None, '', 0, '0') or orig in (None, '', 0, '0'):
+                return False
+            return int(dest) == int(orig)
+        except (ValueError, TypeError):
+            return False
+
+    def _destino_esperado(self, raw_data, descripcion, alm_origen):
+        """
+        Determina almacén destino esperado de una salida.
+        Orden: raw_data['almdestino'] → regex sobre descripción → None.
+        Si destino == origen, lo trata como indeterminado.
+        """
+        raw_dest = None
+        raw_orig = None
+        if isinstance(raw_data, dict):
+            raw_dest = raw_data.get('almdestino')
+            raw_orig = raw_data.get('almorigen')
+
+        def _to_int(v):
+            if v in (None, '', 0, '0'):
+                return None
+            try:
+                return int(v)
+            except (ValueError, TypeError):
+                return None
+
+        dest_int = _to_int(raw_dest)
+        orig_int = _to_int(raw_orig)
+        if dest_int and dest_int != orig_int and dest_int != alm_origen:
+            return dest_int
+
+        m = self._RE_DESTINO_DESC.search(descripcion or '')
+        if m:
+            try:
+                cand = int(m.group(1))
+                if cand != alm_origen:
+                    return cand
+            except ValueError:
+                pass
+        return None
 
     # ═════════════════════════════════════════════════════════════════════════
     # Post-proceso — Actualizar riesgo por tienda (delegado a joz.riesgos)

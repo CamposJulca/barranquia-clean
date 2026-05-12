@@ -23,6 +23,7 @@ import {
   Trash2,
   X,
   AlertTriangle,
+  ArrowLeftRight,
 } from 'lucide-react';
 import {
   getReglas,
@@ -41,6 +42,7 @@ const ICON_MAP: Record<string, typeof Activity> = {
   Users,
   AlertTriangle,
   Shield,
+  ArrowLeftRight,
 };
 
 function getIcon(name: string) {
@@ -94,24 +96,31 @@ const PARAMS_POR_MOTOR: Record<string, ParamMeta[]> = {
     { key: 'ratio_media', label: 'Ratio mínimo para alertar', step: 0.1, min: 1, max: 50, suffix: 'x promedio' },
     { key: 'ratio_alta', label: 'Ratio para severidad alta', step: 0.1, min: 1, max: 50, suffix: 'x promedio' },
   ],
+  contrapartida: [
+    { key: 'ventana_dias', label: 'Ventana de días', step: 1, min: 1, max: 30, suffix: 'días' },
+    { key: 'tolerancia_monto_pct', label: 'Tolerancia (%)', step: 0.5, min: 0, max: 50, suffix: '%' },
+  ],
 };
 
 const MOTOR_LABELS: Record<string, string> = {
   zscore: 'Z-Score (desviación estadística)',
   conteo: 'Conteo (agrupación y umbral)',
   ratio: 'Ratio (proporción vs promedio)',
+  contrapartida: 'Contrapartida (matching salida↔entrada)',
 };
 
 const DEFAULTS_POR_MOTOR: Record<string, Record<string, number>> = {
   zscore: { zscore_media: 2.0, zscore_alta: 3.0, zscore_critica: 4.0 },
   conteo: { min_txns: 5, min_txns_alta: 10, min_txns_critica: 20 },
   ratio: { ratio_media: 2.0, ratio_alta: 3.0 },
+  contrapartida: { ventana_dias: 3, tolerancia_monto_pct: 0.0 },
 };
 
 const MOTOR_COLORS: Record<string, string> = {
   zscore: '#f59e0b',
   conteo: '#8b5cf6',
   ratio: '#06b6d4',
+  contrapartida: '#ef4444',
 };
 
 // Tipos de transacción permitidos para tipos_aplicables.

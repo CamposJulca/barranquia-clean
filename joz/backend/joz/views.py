@@ -1094,12 +1094,23 @@ def sql_schema(request):
 
 # ── Reglas de detección (CRUD) ────────────────────────────────────────────────
 
-MOTOR_VALIDOS = {'zscore', 'conteo', 'ratio'}
+MOTOR_VALIDOS = {'zscore', 'conteo', 'ratio', 'contrapartida'}
 
 PARAMETROS_REQUERIDOS = {
     'zscore': ['zscore_media', 'zscore_alta', 'zscore_critica'],
     'conteo': ['min_txns', 'min_txns_alta', 'min_txns_critica'],
     'ratio':  ['ratio_media', 'ratio_alta'],
+    'contrapartida': ['ventana_dias', 'tolerancia_monto_pct'],
+}
+
+# Rangos aceptados para params de cada motor (post-coerción a float).
+# Solo se chequean si la clave existe. Mantenelo alineado con
+# PARAMS_POR_MOTOR en Settings.tsx.
+PARAMETROS_RANGO = {
+    'contrapartida': {
+        'ventana_dias':         (1, 30),
+        'tolerancia_monto_pct': (0, 50),
+    },
 }
 
 
@@ -1213,6 +1224,15 @@ def _validar_regla(data, parcial=False):
                         except (ValueError, TypeError):
                             errores['parametros'] = f'El parámetro "{k}" debe ser numérico.'
                             break
+
+                    if 'parametros' not in errores:
+                        for k, (lo, hi) in PARAMETROS_RANGO.get(motor, {}).items():
+                            if k in params_clean and not (lo <= params_clean[k] <= hi):
+                                errores['parametros'] = (
+                                    f'El parámetro "{k}" debe estar entre {lo} y {hi}.'
+                                )
+                                break
+
                     if 'parametros' not in errores:
                         campos['parametros'] = params_clean
             else:
