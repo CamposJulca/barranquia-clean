@@ -1176,14 +1176,38 @@ def _validar_regla(data, parcial=False):
             errores['parametros'] = 'parametros debe ser un objeto JSON.'
         else:
             motor = tipo_motor or campos.get('tipo_motor')
-            if motor and motor in PARAMETROS_REQUERIDOS:
-                faltantes = [k for k in PARAMETROS_REQUERIDOS[motor] if k not in data['parametros']]
+            params_input = data['parametros']
+
+            # tipos_aplicables: lista de tipos de transacción a los que aplica
+            # la regla. Opcional; si no viene, la detección usa el default
+            # ['Aporte', 'Retiro'] (todos los tipos existentes hoy en el ERP).
+            # Si el ERP suma tipos nuevos a futuro, hay que ampliar TIPOS_VALIDOS.
+            TIPOS_VALIDOS = {'Aporte', 'Retiro'}
+            tipos_err = None
+            if 'tipos_aplicables' in params_input:
+                tipos = params_input['tipos_aplicables']
+                if not isinstance(tipos, list) or not tipos:
+                    tipos_err = 'tipos_aplicables debe ser una lista no vacía.'
+                else:
+                    invalidos = [t for t in tipos if t not in TIPOS_VALIDOS]
+                    if invalidos:
+                        tipos_err = (
+                            f'tipos_aplicables contiene valores inválidos: {invalidos}. '
+                            f'Permitidos: {sorted(TIPOS_VALIDOS)}.'
+                        )
+
+            if tipos_err:
+                errores['parametros'] = tipos_err
+            elif motor and motor in PARAMETROS_REQUERIDOS:
+                faltantes = [k for k in PARAMETROS_REQUERIDOS[motor] if k not in params_input]
                 if faltantes:
                     errores['parametros'] = f'Faltan claves requeridas para motor {motor}: {faltantes}'
                 else:
-                    # Validar que son numéricos
                     params_clean = {}
-                    for k, v in data['parametros'].items():
+                    for k, v in params_input.items():
+                        if k == 'tipos_aplicables':
+                            params_clean[k] = list(v)
+                            continue
                         try:
                             params_clean[k] = float(v)
                         except (ValueError, TypeError):
@@ -1192,7 +1216,7 @@ def _validar_regla(data, parcial=False):
                     if 'parametros' not in errores:
                         campos['parametros'] = params_clean
             else:
-                campos['parametros'] = data['parametros']
+                campos['parametros'] = params_input
 
     return campos, errores
 

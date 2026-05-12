@@ -171,6 +171,16 @@ class Command(BaseCommand):
         """Lee un parámetro numérico de la regla con fallback."""
         return float(regla.parametros.get(key, default))
 
+    def _tipos_aplicables(self, regla):
+        """
+        Lista de tipos de transacción a los que aplica la regla.
+        Default: ambos tipos (retrocompatible con reglas viejas).
+        """
+        tipos = regla.parametros.get('tipos_aplicables')
+        if not isinstance(tipos, list) or not tipos:
+            return ['Aporte', 'Retiro']
+        return [str(t) for t in tipos]
+
     # ═════════════════════════════════════════════════════════════════════════
     # Motor zscore — Monto inusual (Z-score por almacén + tipo + categoría)
     # ═════════════════════════════════════════════════════════════════════════
@@ -182,9 +192,15 @@ class Command(BaseCommand):
         z_critica = self._param(regla, 'zscore_critica', 4.0)
         ventana_dias = int(self._param(regla, 'ventana_dias', 60))
 
-        self.stdout.write(f'  [{regla.nombre}] Z-score >{z_media} por almacén+tipo+categoría (ventana {ventana_dias} días)...')
+        tipos_apl = self._tipos_aplicables(regla)
+        self.stdout.write(
+            f'  [{regla.nombre}] Z-score >{z_media} por almacén+tipo+categoría '
+            f'(ventana {ventana_dias} días, tipos={tipos_apl})...'
+        )
 
-        base_qs = qs.filter(almacen__isnull=False, tipo__isnull=False).exclude(tipo='')
+        base_qs = (
+            qs.filter(almacen__isnull=False, tipo__in=tipos_apl)
+        )
 
         # Filtrar ventana temporal para la base estadística
         if ventana_dias > 0:
@@ -256,12 +272,15 @@ class Command(BaseCommand):
         min_alta = int(self._param(regla, 'min_txns_alta', 10))
         min_critica = int(self._param(regla, 'min_txns_critica', 20))
 
+        tipos_apl = self._tipos_aplicables(regla)
         self.stdout.write(
-            f'  [{regla.nombre}] ≥{min_txns} txns/cliente/día por tipo+categoría...'
+            f'  [{regla.nombre}] ≥{min_txns} txns/cliente/día por tipo+categoría '
+            f'(tipos={tipos_apl})...'
         )
 
         txn_data = list(
-            qs.exclude(numero_identificacion__in=CLIENTES_BULK)
+            qs.filter(tipo__in=tipos_apl)
+            .exclude(numero_identificacion__in=CLIENTES_BULK)
             .exclude(numero_identificacion='')
             .values_list('id', 'numero_identificacion', 'cliente', 'fecha',
                          'tipo', 'descripcion', 'almacen', 'monto')
@@ -320,13 +339,15 @@ class Command(BaseCommand):
         ratio_media = self._param(regla, 'ratio_media', 2.0)
         ratio_alta = self._param(regla, 'ratio_alta', 3.0)
 
+        tipos_apl = self._tipos_aplicables(regla)
         self.stdout.write(
-            f'  [{regla.nombre}] ratio >{ratio_media}x promedio por tipo+categoría...'
+            f'  [{regla.nombre}] ratio >{ratio_media}x promedio por tipo+categoría '
+            f'(tipos={tipos_apl})...'
         )
 
         txn_data = list(
-            qs.exclude(usuario_cajero='')
-            .filter(tipo__isnull=False).exclude(tipo='')
+            qs.filter(tipo__in=tipos_apl)
+            .exclude(usuario_cajero='')
             .values_list('id', 'usuario_cajero', 'fecha', 'tipo', 'descripcion', 'monto')
         )
 
