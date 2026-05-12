@@ -170,18 +170,14 @@ Carga:
 
 ### Joz — Transacciones SuperEfectivo
 
-```bash
-docker exec barranquia_joz_backend python manage.py seed_joz
-```
+JOZ opera bajo el principio **"datos reales del subdata del ERP"** (ver §11.5 del documento técnico v2.1). No hay seed sintético en el repo. Para poblar un entorno local de JOZ:
 
-Carga:
-- 29 transacciones reales del 27/03/2026 (empeños, pagos de interés, aperturas/cierres de caja)
-- Distribuidas en 6 almacenes (2, 6, 9, 10, 12, 16)
+1. **Restaurar un dump reciente del subdata** coordinado con el administrador del proyecto, o
+2. **Ejecutar el ETL manualmente** contra la API de SuperEfectivo cuando las credenciales y el whitelisting estén disponibles.
 
-> Para **volver a cargar** desde cero agrega `--clear`:
+> Para volver a cargar ServiPáramo desde cero agrega `--clear`:
 > ```bash
 > docker exec barranquia_serviparamo_backend python manage.py seed_serviparamo --clear
-> docker exec barranquia_joz_backend python manage.py seed_joz --clear
 > ```
 
 ---
@@ -373,7 +369,8 @@ barranquIA-clean/
 │   │       ├── views.py        # Endpoints REST
 │   │       └── management/
 │   │           └── commands/
-│   │               └── seed_joz.py
+│   │               ├── detectar_anomalias.py
+│   │               └── calcular_riesgos.py
 │   └── frontend/               # React SPA (puerto 9023)
 ├── avantika/                   # Microservicio Avantika (puerto 8012/9022)
 ├── shared/
@@ -416,12 +413,13 @@ docker exec barranquia_joz_backend python manage.py migrate
 
 ### El seed falla con "already exists"
 
-Los seeds son idempotentes — volver a ejecutarlos sin `--clear` omite los registros existentes. Si quieres datos frescos:
+El seed de ServiPáramo es idempotente — volver a ejecutarlo sin `--clear` omite los registros existentes. Si quieres datos frescos:
 
 ```bash
 docker exec barranquia_serviparamo_backend python manage.py seed_serviparamo --clear
-docker exec barranquia_joz_backend python manage.py seed_joz --clear
 ```
+
+> JOZ no tiene comando de seed: para datos frescos, restaurar un dump del subdata o correr el ETL manual. Ver §11.5 del documento técnico v2.1.
 
 ### Docker Desktop dice "out of memory"
 

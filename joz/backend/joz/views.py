@@ -916,12 +916,13 @@ def historial(request):
 def etl_run(request):
     """
     ETL deshabilitado temporalmente — no se conecta a la API externa.
-    Los datos se cargan mediante el comando seed: python manage.py seed_joz
+    Para restaurar datos en un entorno limpio, contactar al administrador
+    para coordinar una nueva extracción del subdata del ERP de SuperEfectivo.
     """
     return Response(_ok({
         'corriendo':     False,
         'mensaje':       'ETL deshabilitado: la conexión a la API externa está suspendida. '
-                         'Use "python manage.py seed_joz" para cargar datos de prueba.',
+                         'Contacte al administrador para restaurar datos desde el subdata del ERP.',
     }), status=status.HTTP_200_OK)
 
 

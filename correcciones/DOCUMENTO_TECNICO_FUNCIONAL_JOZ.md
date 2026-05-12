@@ -178,8 +178,7 @@ joz/
 │   │   ├── apps.py               # Hook de arranque del scheduler
 │   │   └── management/commands/
 │   │       ├── detectar_anomalias.py
-│   │       ├── calcular_riesgos.py
-│   │       └── seed_joz.py
+│   │       └── calcular_riesgos.py
 │   └── ml_models/                # Modelos serializados (.joblib)
 ├── frontend/src/
 │   ├── pages/                    # Dashboard, Alerts, Risks, History,
@@ -639,9 +638,6 @@ docker exec barranquia_joz_backend python manage.py detectar_anomalias
 
 # Recalcular riesgos
 docker exec barranquia_joz_backend python manage.py calcular_riesgos
-
-# Sembrar datos de demostración
-docker exec barranquia_joz_backend python manage.py seed_joz
 ```
 
 ### 11.3 Operación recomendada (cliente)
@@ -661,6 +657,16 @@ Pendiente de confirmar / suministrar por J.O.Z. para producción 24/7:
 - Whitelisting de IP pública del servidor BarranquIA.
 - Frecuencia objetivo (cada hora vs cierre de día) y latencia entre POS y API.
 - Ventana histórica disponible para carga inicial extendida.
+
+### 11.5 Principio operativo: datos reales
+
+El sistema opera exclusivamente sobre el subdata real del ERP SuperEfectivo de J.O.Z. **No se usan datos sintéticos en ningún entorno** (desarrollo, staging ni producción). Las decisiones de producto, la calibración del motor de detección y las cifras presentadas al cliente se basan únicamente en transacciones reales.
+
+Implicaciones:
+
+- Los entornos de desarrollo local requieren acceso al subdata vía ETL manual o restauración de un dump reciente coordinado con el administrador.
+- **No existe comando de seeding sintético en el repo.** El management command `seed_joz` fue retirado en 2026-05-12 para alinear el repositorio con este principio; el endpoint `POST /api/joz/etl/run/` deja de sugerirlo cuando el ETL está deshabilitado.
+- Las pruebas funcionales del motor se ejecutan contra muestras de BD real, no contra fixtures.
 
 ---
 

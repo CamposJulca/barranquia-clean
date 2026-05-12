@@ -121,7 +121,7 @@ Estos ítems los debe entregar SuperEfectivo. Bloquean el avance si no llegan a 
 | Tabla de movimientos de inventario | RØiner K-rrillØ | Sprint 2 |
 | Tabla de cuadres de caja del administrador | RØiner K-rrillØ | Sprint 2 |
 
-> Mientras no lleguen las credenciales, el equipo trabaja con el seed de 244 transacciones reales disponible en `python manage.py seed_joz`.
+> Mientras no lleguen las credenciales, el equipo trabaja sobre dumps recientes del subdata real del ERP (el proyecto opera bajo el principio de datos reales exclusivos — ver §11.5 del documento técnico v2.1; no hay seed sintético en el repo).
 
 ---
 
