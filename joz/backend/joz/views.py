@@ -1194,7 +1194,7 @@ def sql_schema(request):
 
 # ── Reglas de detección (CRUD) ────────────────────────────────────────────────
 
-MOTOR_VALIDOS = {'zscore', 'conteo', 'ratio'}
+MOTOR_VALIDOS = {'zscore', 'conteo', 'ratio', 'contrapartida'}
 
 PARAMETROS_REQUERIDOS = {
     'zscore': ['zscore_media', 'zscore_alta', 'zscore_critica'],
