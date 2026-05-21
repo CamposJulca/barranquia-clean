@@ -441,6 +441,8 @@ def stats(request):
             buckets = [('Apertura de caja', total_count, total_monto)]
         elif desc.startswith('cierre'):
             buckets = [('Cierre de caja', total_count, total_monto)]
+        elif desc.startswith('venta'):
+            buckets = [('Venta', total_count, total_monto)]
         elif 'western' in desc:
             buckets = []
             if t['count_entrada']:
