@@ -109,7 +109,7 @@ class Riesgo(models.Model):
     )
     probabilidad = models.FloatField(null=True, blank=True)
     impacto_estimado = models.DecimalField(max_digits=18, decimal_places=2, null=True, blank=True)
-    calculado_en = models.DateTimeField(auto_now=True)
+    calculado_en = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         db_table = 'joz_riesgos'
@@ -117,6 +117,51 @@ class Riesgo(models.Model):
 
     def __str__(self):
         return f"{self.categoria} — {self.nivel}"
+
+
+class ConfigDeteccion(models.Model):
+    """
+    Configuración de las 3 reglas de detección de anomalías.
+    Singleton lógico (siempre pk=1).
+    """
+
+    id = models.PositiveSmallIntegerField(primary_key=True, default=1, editable=False)
+
+    # ── 1. Monto inusual (Z-score por almacén) ──────────────────────────────
+    enabled_desviacion_monto = models.BooleanField(default=True,
+        help_text="Detectar montos anómalos por Z-score")
+    zscore_media = models.FloatField(default=2.0,
+        help_text="Z-score mínimo para generar alerta (severidad media)")
+    zscore_alta = models.FloatField(default=3.0,
+        help_text="Z-score para severidad alta")
+    zscore_critica = models.FloatField(default=4.0,
+        help_text="Z-score para severidad crítica")
+
+    # ── 2. Fraccionamiento de operaciones ─────────────────────────────────
+    enabled_fraccionamiento = models.BooleanField(default=True,
+        help_text="Detectar clientes con muchas transacciones pequeñas en un día")
+    fraccionamiento_min_txns = models.IntegerField(default=5,
+        help_text="Mínimo de transacciones/día para considerar fraccionamiento")
+    fraccionamiento_min_txns_alta = models.IntegerField(default=10,
+        help_text="Transacciones/día para severidad alta")
+    fraccionamiento_min_txns_critica = models.IntegerField(default=20,
+        help_text="Transacciones/día para severidad crítica")
+
+    # ── 3. Concentración de cajero ──────────────────────────────────────────
+    enabled_concentracion_cajero = models.BooleanField(default=True,
+        help_text="Detectar cajeros con volumen anómalo")
+    cajero_ratio = models.FloatField(default=2.0,
+        help_text="Factor mínimo sobre promedio para alertar (ej: 2.0 = 2x)")
+    cajero_ratio_alta = models.FloatField(default=3.0,
+        help_text="Factor para severidad alta")
+
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'joz_config_deteccion'
+
+    def __str__(self):
+        return "Config Detección"
 
 
 class ReglaDeteccion(models.Model):
@@ -134,7 +179,6 @@ class ReglaDeteccion(models.Model):
         ('zscore', 'Z-Score (desviación estadística)'),
         ('conteo', 'Conteo (agrupación y umbral)'),
         ('ratio', 'Ratio (proporción vs promedio)'),
-        ('contrapartida', 'Contrapartida (matching salida↔entrada)'),
     ]
 
     nombre = models.CharField(max_length=200,

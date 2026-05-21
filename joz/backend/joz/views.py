@@ -14,8 +14,7 @@ from decimal import Decimal, InvalidOperation
 
 import requests as http_requests
 
-from .models import Transaccion, Alerta, Riesgo, ETLLog, ReglaDeteccion
-from . import riesgos as riesgos_module
+from .models import Transaccion, Alerta, Riesgo, ETLLog, ConfigDeteccion, ReglaDeteccion
 
 logger = logging.getLogger(__name__)
 
@@ -134,6 +133,28 @@ def _es_operacion_interna(descripcion: str) -> bool:
     return False
 
 
+def _serializar_config_deteccion(config):
+    return {
+        'id': config.id,
+        # 1. Monto inusual
+        'enabled_desviacion_monto': config.enabled_desviacion_monto,
+        'zscore_media': config.zscore_media,
+        'zscore_alta': config.zscore_alta,
+        'zscore_critica': config.zscore_critica,
+        # 2. Fraccionamiento
+        'enabled_fraccionamiento': config.enabled_fraccionamiento,
+        'fraccionamiento_min_txns': config.fraccionamiento_min_txns,
+        'fraccionamiento_min_txns_alta': config.fraccionamiento_min_txns_alta,
+        'fraccionamiento_min_txns_critica': config.fraccionamiento_min_txns_critica,
+        # 3. Concentración cajero
+        'enabled_concentracion_cajero': config.enabled_concentracion_cajero,
+        'cajero_ratio': config.cajero_ratio,
+        'cajero_ratio_alta': config.cajero_ratio_alta,
+        # Meta
+        'updated_at': config.updated_at.isoformat() if config.updated_at else None,
+    }
+
+
 def _coerce_bool(value, field_name):
     if isinstance(value, bool):
         return value
@@ -148,7 +169,112 @@ def _coerce_bool(value, field_name):
     raise ValueError(f'`{field_name}` debe ser booleano.')
 
 
+def _coerce_int(value, field_name, min_value, max_value):
+    if isinstance(value, bool):
+        raise ValueError(f'`{field_name}` debe ser un entero.')
+    try:
+        parsed = int(str(value).strip())
+    except (ValueError, TypeError):
+        raise ValueError(f'`{field_name}` debe ser un entero válido.')
+    if parsed < min_value or parsed > max_value:
+        raise ValueError(f'`{field_name}` debe estar entre {min_value} y {max_value}.')
+    return parsed
+
+
+def _coerce_decimal(value, field_name, min_value, max_value):
+    try:
+        parsed = Decimal(str(value).strip())
+    except (InvalidOperation, AttributeError, TypeError):
+        raise ValueError(f'`{field_name}` debe ser numérico.')
+    if parsed < min_value or parsed > max_value:
+        raise ValueError(f'`{field_name}` debe estar entre {min_value} y {max_value}.')
+    return parsed
+
+
 # ── Vistas ────────────────────────────────────────────────────────────────────
+
+@api_view(['GET', 'PATCH'])
+def config_deteccion(request):
+    """
+    Configuración de reglas de detección (singleton pk=1).
+    GET   -> estado actual
+    PATCH -> actualización parcial
+    """
+    config, _ = ConfigDeteccion.objects.get_or_create(pk=1)
+
+    if request.method == 'GET':
+        return Response(_ok(_serializar_config_deteccion(config)))
+
+    if not isinstance(request.data, dict):
+        return _err('Payload inválido. Se esperaba un objeto JSON.')
+
+    payload = request.data
+    updates = {}
+    field_errors = {}
+
+    # ── Campos booleanos (toggles de reglas) ─────────────────────────
+    bool_fields = [
+        'enabled_desviacion_monto',
+        'enabled_fraccionamiento',
+        'enabled_concentracion_cajero',
+    ]
+    for field in bool_fields:
+        if field in payload:
+            try:
+                updates[field] = _coerce_bool(payload.get(field), field)
+            except ValueError as exc:
+                field_errors[field] = str(exc)
+
+    # ── Campos float (umbrales) ──────────────────────────────────────
+    float_fields = {
+        'zscore_media': (0.5, 10.0),
+        'zscore_alta': (1.0, 15.0),
+        'zscore_critica': (1.5, 20.0),
+        'cajero_ratio': (1.0, 50.0),
+        'cajero_ratio_alta': (1.0, 50.0),
+    }
+    for field, (mn, mx) in float_fields.items():
+        if field in payload:
+            try:
+                val = float(str(payload.get(field)).strip())
+                if val < mn or val > mx:
+                    raise ValueError(f'`{field}` debe estar entre {mn} y {mx}.')
+                updates[field] = val
+            except (ValueError, TypeError) as exc:
+                field_errors[field] = str(exc)
+
+    # ── Campos enteros ───────────────────────────────────────────────
+    int_fields = {
+        'fraccionamiento_min_txns': (2, 50),
+        'fraccionamiento_min_txns_alta': (3, 100),
+        'fraccionamiento_min_txns_critica': (5, 200),
+    }
+    for field, (mn, mx) in int_fields.items():
+        if field in payload:
+            try:
+                updates[field] = _coerce_int(payload.get(field), field, mn, mx)
+            except ValueError as exc:
+                field_errors[field] = str(exc)
+
+    if field_errors:
+        return Response(
+            {
+                'ok': False,
+                'error': 'Errores de validación en la configuración.',
+                'fields': field_errors,
+            },
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    if not updates:
+        return Response(_ok(_serializar_config_deteccion(config)))
+
+    for field_name, value in updates.items():
+        setattr(config, field_name, value)
+    config.save(update_fields=[*updates.keys(), 'updated_at'])
+
+    return Response(_ok(_serializar_config_deteccion(config)))
+
 
 @api_view(['GET'])
 def stats(request):
@@ -159,10 +285,7 @@ def stats(request):
     hoy = timezone.now().date()
     hace_30_dias = hoy - timedelta(days=30)
 
-    # Filtros de fecha opcionales — RANGO INCLUSIVO en ambos extremos.
-    # `fecha__gte` y `fecha__lte` aseguran que un día específico (ej.
-    # fecha_desde=fecha_hasta='2026-04-15') agregue todas las transacciones
-    # de ese día. Sum() opera sobre la qs filtrada, no fila por fila.
+    # Filtros de fecha opcionales
     fecha_desde = request.GET.get('fecha_desde', '').strip()
     fecha_hasta = request.GET.get('fecha_hasta', '').strip()
 
@@ -377,17 +500,8 @@ def stats(request):
             'traslados':          traslados_count,
         },
         # Rango temporal
-        # `fecha_desde`/`fecha_hasta` reflejan el rango REAL de los datos en la
-        # ventana filtrada (puede ser más corto si no hay txns en los extremos).
-        # `filtro_aplicado` echo del input del usuario — útil para verificar
-        # que el backend recibió el rango esperado y la sumatoria es completa.
         'fecha_desde':              fechas_extremas['fecha_min'].isoformat() if fechas_extremas['fecha_min'] else None,
         'fecha_hasta':              fechas_extremas['fecha_max'].isoformat() if fechas_extremas['fecha_max'] else None,
-        'filtro_aplicado': {
-            'desde':     fecha_desde or None,
-            'hasta':     fecha_hasta or None,
-            'inclusivo': True,
-        },
         'data_range': {
             'min': fechas_globales['fecha_min'].isoformat() if fechas_globales['fecha_min'] else None,
             'max': fechas_globales['fecha_max'].isoformat() if fechas_globales['fecha_max'] else None,
@@ -705,12 +819,6 @@ def riesgos(request):
 
 
 @api_view(['GET'])
-def riesgos_config(request):
-    """Pesos y umbrales vivos del cálculo de riesgo (fuente: joz.riesgos)."""
-    return Response(_ok(riesgos_module.get_config()))
-
-
-@api_view(['GET'])
 def riesgo_detalle(request, pk):
     """
     Detalle de riesgo operativo.
@@ -773,12 +881,6 @@ def historial(request):
     origen  = request.GET.get('origen', '').strip()
     q       = request.GET.get('q', '').strip()
 
-    # Por defecto incluye operaciones internas (aperturas/cierres/traslados) para
-    # no romper History.tsx, que muestra todo el flujo. StoreDetail.tsx pasa
-    # `incluir_internas=false` para limitar la vista por almacén a flujo del cliente.
-    incluir_internas_raw = request.GET.get('incluir_internas', 'true').strip().lower()
-    incluir_internas = incluir_internas_raw not in ('false', '0', 'no')
-
     if desde:
         qs = qs.filter(fecha__gte=desde)
     if hasta:
@@ -791,8 +893,6 @@ def historial(request):
         qs = qs.filter(estado='cargado')
     elif origen == 'prueba':
         qs = qs.filter(estado='seed')
-    if not incluir_internas:
-        qs = qs.exclude(OPERACIONES_INTERNAS_FILTER)
     if q:
         qs = qs.filter(
             Q(cliente__icontains=q) |
@@ -916,13 +1016,12 @@ def historial(request):
 def etl_run(request):
     """
     ETL deshabilitado temporalmente — no se conecta a la API externa.
-    Para restaurar datos en un entorno limpio, contactar al administrador
-    para coordinar una nueva extracción del subdata del ERP de SuperEfectivo.
+    Los datos se cargan mediante el comando seed: python manage.py seed_joz
     """
     return Response(_ok({
         'corriendo':     False,
         'mensaje':       'ETL deshabilitado: la conexión a la API externa está suspendida. '
-                         'Contacte al administrador para restaurar datos desde el subdata del ERP.',
+                         'Use "python manage.py seed_joz" para cargar datos de prueba.',
     }), status=status.HTTP_200_OK)
 
 
@@ -1074,7 +1173,7 @@ def sql_schema(request):
     from django.db import connection
 
     tables = ['joz_transacciones', 'joz_alertas', 'joz_riesgos',
-              'joz_reglas_deteccion', 'joz_etl_log']
+              'joz_config_deteccion', 'joz_etl_log']
     schema = {}
 
     with connection.cursor() as cursor:
@@ -1095,23 +1194,12 @@ def sql_schema(request):
 
 # ── Reglas de detección (CRUD) ────────────────────────────────────────────────
 
-MOTOR_VALIDOS = {'zscore', 'conteo', 'ratio', 'contrapartida'}
+MOTOR_VALIDOS = {'zscore', 'conteo', 'ratio'}
 
 PARAMETROS_REQUERIDOS = {
     'zscore': ['zscore_media', 'zscore_alta', 'zscore_critica'],
     'conteo': ['min_txns', 'min_txns_alta', 'min_txns_critica'],
     'ratio':  ['ratio_media', 'ratio_alta'],
-    'contrapartida': ['ventana_dias', 'tolerancia_monto_pct'],
-}
-
-# Rangos aceptados para params de cada motor (post-coerción a float).
-# Solo se chequean si la clave existe. Mantenelo alineado con
-# PARAMS_POR_MOTOR en Settings.tsx.
-PARAMETROS_RANGO = {
-    'contrapartida': {
-        'ventana_dias':         (1, 30),
-        'tolerancia_monto_pct': (0, 50),
-    },
 }
 
 
@@ -1188,56 +1276,23 @@ def _validar_regla(data, parcial=False):
             errores['parametros'] = 'parametros debe ser un objeto JSON.'
         else:
             motor = tipo_motor or campos.get('tipo_motor')
-            params_input = data['parametros']
-
-            # tipos_aplicables: lista de tipos de transacción a los que aplica
-            # la regla. Opcional; si no viene, la detección usa el default
-            # ['Aporte', 'Retiro'] (todos los tipos existentes hoy en el ERP).
-            # Si el ERP suma tipos nuevos a futuro, hay que ampliar TIPOS_VALIDOS.
-            TIPOS_VALIDOS = {'Aporte', 'Retiro'}
-            tipos_err = None
-            if 'tipos_aplicables' in params_input:
-                tipos = params_input['tipos_aplicables']
-                if not isinstance(tipos, list) or not tipos:
-                    tipos_err = 'tipos_aplicables debe ser una lista no vacía.'
-                else:
-                    invalidos = [t for t in tipos if t not in TIPOS_VALIDOS]
-                    if invalidos:
-                        tipos_err = (
-                            f'tipos_aplicables contiene valores inválidos: {invalidos}. '
-                            f'Permitidos: {sorted(TIPOS_VALIDOS)}.'
-                        )
-
-            if tipos_err:
-                errores['parametros'] = tipos_err
-            elif motor and motor in PARAMETROS_REQUERIDOS:
-                faltantes = [k for k in PARAMETROS_REQUERIDOS[motor] if k not in params_input]
+            if motor and motor in PARAMETROS_REQUERIDOS:
+                faltantes = [k for k in PARAMETROS_REQUERIDOS[motor] if k not in data['parametros']]
                 if faltantes:
                     errores['parametros'] = f'Faltan claves requeridas para motor {motor}: {faltantes}'
                 else:
+                    # Validar que son numéricos
                     params_clean = {}
-                    for k, v in params_input.items():
-                        if k == 'tipos_aplicables':
-                            params_clean[k] = list(v)
-                            continue
+                    for k, v in data['parametros'].items():
                         try:
                             params_clean[k] = float(v)
                         except (ValueError, TypeError):
                             errores['parametros'] = f'El parámetro "{k}" debe ser numérico.'
                             break
-
-                    if 'parametros' not in errores:
-                        for k, (lo, hi) in PARAMETROS_RANGO.get(motor, {}).items():
-                            if k in params_clean and not (lo <= params_clean[k] <= hi):
-                                errores['parametros'] = (
-                                    f'El parámetro "{k}" debe estar entre {lo} y {hi}.'
-                                )
-                                break
-
                     if 'parametros' not in errores:
                         campos['parametros'] = params_clean
             else:
-                campos['parametros'] = params_input
+                campos['parametros'] = data['parametros']
 
     return campos, errores
 
